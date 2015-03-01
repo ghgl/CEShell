@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- WARNING: Eclipse auto-generated file.
+              Any modifications will be overwritten.
+              To include a user specific buildfile here, simply create one in the same
+              directory with the processing instruction <?eclipse.ant.import?>
+              as the first entry and export the buildfile again. --><project basedir="." default="build" name="CEShell">
+    <property environment="env"/>
+    <property name="CEShellExts.location" value="../CEShellExts"/>
+    <property name="ECLIPSE_HOME" value="C:/DevTools/IBM/SDP"/>
+    <property name="junit.output.dir" value="junit"/>
+    <property name="jcmdline-modified.location" value="../jcmdline-modified"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.5"/>
+    <property name="source" value="1.5"/>
+    <path id="ce-4.5.1-wsi.userclasspath">
+        <pathelement location="../../../Libraries/ce-4.5.1/xlxpScannerUtils.jar"/>
+        <pathelement location="../../../Libraries/ce-4.5.1/Jace-4.5.1.jar"/>
+        <pathelement location="../../../Libraries/ce-4.5.1/log4j.jar"/>
+        <pathelement location="../../../Libraries/ce-4.5.1/stax-api.jar"/>
+        <pathelement location="../../../Libraries/ce-4.5.1/xlxpScanner.jar"/>
+    </path>
+    <path id="JUnit 3.libraryclasspath">
+        <pathelement location="C:/DevTools/IBM/SDPShared/plugins/org.junit_3.8.2.v20080602-1318/junit.jar"/>
+    </path>
+    <path id="jcmdline-modified.classpath">
+        <pathelement location="${jcmdline-modified.location}/bin"/>
+    </path>
+    <path id="CEShell.classpath">
+        <pathelement location="ceshell-dist/classes"/>
+        <path refid="ce-4.5.1-wsi.userclasspath"/>
+        <path refid="JUnit 3.libraryclasspath"/>
+        <path refid="jcmdline-modified.classpath"/>
+    </path>
+    <target name="init">
+        <mkdir dir="ceshell-dist/classes"/>
+        <copy includeemptydirs="false" todir="ceshell-dist/classes">
+            <fileset dir="src" excludes="**/*.launch, **/*.java"/>
+        </copy>
+        <copy includeemptydirs="false" todir="ceshell-dist/classes">
+            <fileset dir="test" excludes="**/*.launch, **/*.java"/>
+        </copy>
+        <copy includeemptydirs="false" todir="ceshell-dist/classes">
+            <fileset dir="resources" excludes="**/*.launch, **/*.java"/>
+        </copy>
+    </target>
+    <target name="clean">
+        <delete dir="ceshell-dist/classes"/>
+    </target>
+    <target depends="clean" name="cleanall">
+        <ant antfile="${jcmdline-modified.location}/build.xml" inheritAll="false" target="clean"/>
+    </target>
+    <target depends="build-subprojects,build-project" name="build"/>
+    <target name="build-subprojects">
+        <ant antfile="${jcmdline-modified.location}/build.xml" inheritAll="false" target="build-project">
+            <propertyset>
+                <propertyref name="build.compiler"/>
+            </propertyset>
+        </ant>
+    </target>
+    <target depends="init" name="build-project">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="ceshell-dist/classes" source="${source}" target="${target}">
+            <src path="src"/>
+            <classpath refid="CEShell.classpath"/>
+        </javac>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="ceshell-dist/classes" source="${source}" target="${target}">
+            <src path="test"/>
+            <classpath refid="CEShell.classpath"/>
+        </javac>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="ceshell-dist/classes" source="${source}" target="${target}">
+            <src path="resources"/>
+            <classpath refid="CEShell.classpath"/>
+        </javac>
+    </target>
+    <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects">
+        <ant antfile="${CEShellExts.location}/build.xml" inheritAll="false" target="clean"/>
+        <ant antfile="${CEShellExts.location}/build.xml" inheritAll="false" target="build">
+            <propertyset>
+                <propertyref name="build.compiler"/>
+            </propertyset>
+        </ant>
+    </target>
+    <target description="copy Eclipse compiler jars to ant lib directory" name="init-eclipse-compiler">
+        <copy todir="${ant.library.dir}">
+            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+        </copy>
+        <unzip dest="${ant.library.dir}">
+            <patternset includes="jdtCompilerAdapter.jar"/>
+            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+        </unzip>
+    </target>
+    <target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
+        <property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
+        <antcall target="build"/>
+    </target>
+    <target name="ACECommandTest.testShowAces">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.ACECommandTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellApp bts">
+        <java classname="com.ibm.bao.ceshell.CEShellApp" failonerror="true" fork="yes">
+            <arg line="bts"/>
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="CEShellApp dev1 (1)">
+        <java classname="com.ibm.bao.ceshell.CEShellApp" failonerror="true" fork="yes">
+            <arg line="-file E:\data\bh-props\dev1-fnadmin1.properties"/>
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="CEShellApp dev1">
+        <java classname="com.ibm.bao.ceshell.CEShellApp" failonerror="true" fork="yes">
+            <arg line="-file E:\data\bh-props\dev1-fnadmin1.properties"/>
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="CEShellApp p8demo vm">
+        <java classname="com.ibm.bao.ceshell.CEShellApp" failonerror="true" fork="yes">
+            <arg line="http://p8demo1:9080/wsi/FNCEWS40DIME/ ICCMOS administrator filenet"/>
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="CEShellApp">
+        <java classname="com.ibm.bao.ceshell.CEShellApp" failonerror="true" fork="yes">
+            <arg line="-file e:\data\bh-props\p8demo1-administrator.properties"/>
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="CEShellTest">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testBadParam">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testDesc">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testDescribe">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testHelp">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testListTypes">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testLs">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testLsCmdLineargs">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testQuery">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testRMCmdLineArgs">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CEShellTest.testSelect">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CEShellTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="ConnectionManagerTest.testConnectionManager">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.connection.ConnectionManagerTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CryptoUtilsTest">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.util.CryptoUtilsTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CryptoUtilsTest.testEncryptNoKey">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.util.CryptoUtilsTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CWDTest">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CWDTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CWDTest.testCd">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CWDTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CWDTest.testCtor">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CWDTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CWDTest.testGetName">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CWDTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="CWDTest.testGetPath">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.CWDTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="Foo">
+        <java classname="com.ibm.bao.ceshell.Foo" failonerror="true" fork="yes">
+            <classpath refid="CEShell.classpath"/>
+        </java>
+    </target>
+    <target name="MaskToARTest.test2d">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.MaskToARTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="MaskToARTest.testCompareMasks">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.MaskToARTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="MaskToARTest.testMaskToAces">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.MaskToARTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="StringUtilTest.testFmtDate">
+        <mkdir dir="${junit.output.dir}"/>
+        <junit fork="yes" printsummary="withOutAndErr">
+            <formatter type="xml"/>
+            <test name="com.ibm.bao.ceshell.util.StringUtilTest" todir="${junit.output.dir}"/>
+            <classpath refid="CEShell.classpath"/>
+        </junit>
+    </target>
+    <target name="junitreport">
+        <junitreport todir="${junit.output.dir}">
+            <fileset dir="${junit.output.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${junit.output.dir}"/>
+        </junitreport>
+    </target>
+</project>
