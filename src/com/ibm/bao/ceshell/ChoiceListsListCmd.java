@@ -66,7 +66,7 @@ public class ChoiceListsListCmd extends BaseCommand {
 	    RepositoryRowSet rowSet = null; 
 	    
 	    if (listLong) {
-			query =  "Select DisplayName, DescriptiveText, DataType, Creator, DateCreated from ChoiceList order by DisplayName";
+			query =  "Select Id, Name, DisplayName, DescriptiveText, DataType, Creator, DateCreated from ChoiceList order by DisplayName";
 		} else {
 			query = "Select DisplayName from ChoiceList order by DisplayName";
 		}
@@ -109,8 +109,11 @@ public class ChoiceListsListCmd extends BaseCommand {
 	private String readRowLong(ColDef[] cols, 
 			com.filenet.api.property.Properties props) {
 		String[] rowData = null;
+		
 		String rowStr = null;
+		String idStr = null;
 		String choiceListName = null;
+		String choiceListDisplayName = null;
 		String description = null;
 		Integer dataType = null;
 		String creator;
@@ -118,7 +121,9 @@ public class ChoiceListsListCmd extends BaseCommand {
 		String dateCreatedStr = null;
 		String dataTypeStr = null;
 		try {
-			choiceListName = props.getStringValue("DisplayName");
+			idStr = props.getIdValue("Id").toString();
+			choiceListName = props.getStringValue("Name");
+			choiceListDisplayName = props.getStringValue("DisplayName");
 			description = props.getStringValue("DescriptiveText");
 			creator = props.getStringValue("Creator");
 			dateCreated = props.getDateTimeValue("DateCreated");
@@ -126,7 +131,9 @@ public class ChoiceListsListCmd extends BaseCommand {
 			dataTypeStr = TypeID.getInstanceFromInt(dataType.intValue()).toString();
 			dateCreatedStr = StringUtil.fmtDate(dateCreated);
 			rowData = new String[] {
+					idStr,
 					choiceListName,
+					choiceListDisplayName,
 					description,
 					dataTypeStr,
 					creator,
@@ -145,6 +152,8 @@ public class ChoiceListsListCmd extends BaseCommand {
 	 */
 	private ColDef[] createColDefs() {
 		ColDef[] cols = {
+				new ColDef("Id", 41, StringUtil.ALIGN_LEFT),
+				new ColDef("Name", 32, StringUtil.ALIGN_LEFT),
 				new ColDef("Display Name", 32, StringUtil.ALIGN_LEFT),
 				new ColDef("Description", 40, StringUtil.ALIGN_LEFT),
 				new ColDef("Data Type", 9, StringUtil.ALIGN_LEFT),
