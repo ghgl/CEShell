@@ -81,22 +81,63 @@ public class ChoiceListPropsCmd extends BaseCommand {
 		 * There is a ChoiceList class in com.filenet.api.collection
 		 * There is another ChoicList class in com.filenet.api.admin  
 		 */
-		String name = cl.get_DisplayName();
+		String idStr = cl.get_Id().toString();
+		String name = cl.get_Name();
+		String displayName = cl.get_DisplayName();
 		String description = cl.get_DescriptiveText();
-		ColDef[] cols = {
-				new ColDef("Name",32, StringUtil.ALIGN_LEFT),
-				new ColDef("Description", 50, StringUtil.ALIGN_LEFT),
-		};
+		String creator = cl.get_Creator();
+		String dataTypeStr = cl.get_DataType().toString();
+		Boolean hasHierarchy = cl.get_HasHierarchy();
+		
 		StringBuffer buf = new StringBuffer();
-		buf.append(StringUtil.formatRow(cols, new String[] {"Name:", name}, " ")).append("\n");
-		buf.append(StringUtil.formatRow(cols, new String[] {"Description:", description}, " ")).append("\n");
-		buf.append("Choice Values:\n-----------------------------------------------\n");
-		getResponse().printOut(buf.toString());
+		
+		buf.append(String.format("Choice list properties for %s", name)).append("\n");
+		appendValue(buf, idStr, "Id");
+		appendValue(buf, name, "Name");
+		appendValue(buf, displayName, "DislayName");
+		appendValue(buf, description, "DescriptiveText");
+		appendValue(buf, dataTypeStr, "DataType");
+		appendValue(buf, hasHierarchy.toString(), "HasHierarchy");
+		
+
+		buf.append("Choice Values (Name, DisplayName):\n----------------------------------------------------------------------------------------------------\n");
+		
 		com.filenet.api.collection.ChoiceList clProp= cl.get_ChoiceValues();
-		doDisplayPropertyChoiceValues(depth+1, clProp);
+		if (hasHierarchy) {
+			doDisplayPropertyChoiceValuesHierchical(buf, depth+1, clProp);
+		} else {
+			doDisplayPropertyChoiceValuesFlat(buf, clProp);
+		}
+		getResponse().printOut(buf.toString());
 	}
 
-	public void doDisplayPropertyChoiceValues(int depth,
+	/**
+	 * @param clProp
+	 */
+	private void doDisplayPropertyChoiceValuesFlat(
+			StringBuffer buf,
+			com.filenet.api.collection.ChoiceList clProp) {
+		// TODO Auto-generated method stub
+		Iterator<?> iter = clProp.iterator();
+		while (iter.hasNext()) {
+			Choice nextChoice = (Choice) iter.next();
+			ChoiceType ct = nextChoice.get_ChoiceType();
+			String choiceValueStr = "??";
+			String choiceDesc = nextChoice.get_DisplayName();
+			
+			/** choiceValueStr should be repalced here. If it's a ?? its a bug **/
+			if (ChoiceType.INTEGER.equals(ct)) {
+				choiceValueStr = nextChoice.get_ChoiceIntegerValue().toString();
+			} else if (ChoiceType.STRING.equals(ct))  {
+				choiceValueStr = nextChoice.get_ChoiceStringValue();
+			} 
+			appendValue(buf, choiceValueStr, "\t" + choiceDesc);
+		}
+	}
+
+	public void doDisplayPropertyChoiceValuesHierchical(
+			StringBuffer buf,
+			int depth,
 			com.filenet.api.collection.ChoiceList clProp) {
 		Iterator<?> iter = clProp.iterator();
 		while (iter.hasNext()) {
@@ -112,7 +153,7 @@ public class ChoiceListPropsCmd extends BaseCommand {
 			 * -- or a group node for a nested collection of string-type choice items.
 			 *
 			 */
-			doDisplayChoice(nextChoice, depth);
+			doDisplayChoice(buf, nextChoice, depth);
 		}
 	}
 
@@ -125,13 +166,15 @@ public class ChoiceListPropsCmd extends BaseCommand {
 	 *  
 	 * @param nextChoice
 	 */
-	private void doDisplayChoice(Choice nextChoice, int depth) {
+	private void doDisplayChoice(
+			StringBuffer buf, 
+			Choice nextChoice, 
+			int depth) {
 		String displayName = nextChoice.get_DisplayName();
 		ChoiceType ct = nextChoice.get_ChoiceType();
 		String choiceValueStr = null;
 		boolean hierarchical = false;
 		
-
 		if (ChoiceType.INTEGER.equals(ct)) {
 			choiceValueStr = nextChoice.get_ChoiceIntegerValue().toString();
 		} else if (ChoiceType.STRING.equals(ct))  {
@@ -145,11 +188,11 @@ public class ChoiceListPropsCmd extends BaseCommand {
 				choiceValueStr = "string collection";
 			}
 		}
-		doWriteChoiceItem(displayName, choiceValueStr, hierarchical, depth);
+		doWriteChoiceItem(buf, displayName, choiceValueStr, hierarchical, depth);
 		
 		if (hierarchical) {
 			com.filenet.api.collection.ChoiceList childChoiceList = nextChoice.get_ChoiceValues();
-			doDisplayPropertyChoiceValues(depth + 1, childChoiceList);
+			doDisplayPropertyChoiceValuesHierchical(buf, depth + 1, childChoiceList);
 		}
 	}
 
@@ -160,9 +203,12 @@ public class ChoiceListPropsCmd extends BaseCommand {
 	 * @param hierarchical
 	 * @param depth
 	 */
-	private void doWriteChoiceItem(String displayName, String choiceValueStr,
+	private void doWriteChoiceItem(
+			StringBuffer buf, 
+			String displayName, 
+			String choiceValueStr,
 			boolean hierarchical, int depth) {
-		StringBuffer buf = new StringBuffer();
+		
 		if (depth > 0) {
 			for (int i = 0; i < depth; i++) {
 				buf.append("|----");
@@ -170,9 +216,17 @@ public class ChoiceListPropsCmd extends BaseCommand {
 			}
 		}
 		buf.append(displayName);
-		buf.append("\t").append(choiceValueStr);
-		getResponse().printOut(buf.toString());
-		
+		buf.append("\t").append(choiceValueStr).append("\n");
+	}
+	
+	private void appendValue(StringBuffer buf, Object value, String name) {
+		buf.append(StringUtil.padLeft(name, ".", 40));
+		if (value == null) {
+			buf.append("null");
+		} else {
+			buf.append(value.toString());
+		}
+		buf.append("\n");
 	}
 
 	/**
