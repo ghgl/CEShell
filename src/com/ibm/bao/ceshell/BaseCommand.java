@@ -88,7 +88,7 @@ public abstract class BaseCommand {
 			success = doRun(cl);
 				
 		} catch (Throwable e) {
-//			e.printStackTrace();
+			e.printStackTrace();
 			getResponse().printErr(e.getMessage());
 		}
 	}

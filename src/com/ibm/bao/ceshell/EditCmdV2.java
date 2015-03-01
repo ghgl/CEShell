@@ -6,17 +6,16 @@ package com.ibm.bao.ceshell;
 import java.util.Collection;
 import java.util.HashSet;
 
+import jcmdline.CmdLineHandler;
+import jcmdline.Parameter;
+import jcmdline.StringParam;
+
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Folder;
-import com.filenet.api.core.IndependentlyPersistableObject;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 import com.ibm.bao.ceshell.impl.DocEditInfo;
 import com.ibm.bao.ceshell.impl.EditInfo;
 import com.ibm.bao.ceshell.impl.EditInfoImpl;
-
-import jcmdline.CmdLineHandler;
-import jcmdline.Parameter;
-import jcmdline.StringParam;
 
 /**
  *  EditCmd

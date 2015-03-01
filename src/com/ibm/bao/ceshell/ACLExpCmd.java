@@ -114,6 +114,7 @@ public class ACLExpCmd extends AbsAclCmd {
 	 * @param accessListFile
 	 * @param string
 	 */
+	@SuppressWarnings("unchecked")
 	public boolean storeAcl(
 			AccessPermissionList list, 
 			File accessListFile, 

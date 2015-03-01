@@ -15,9 +15,11 @@ import jcmdline.FileParam;
 import jcmdline.Parameter;
 import jcmdline.StringParam;
 
+import com.filenet.api.collection.ReferentialContainmentRelationshipSet;
 import com.filenet.api.constants.RefreshMode;
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Folder;
+import com.filenet.api.core.ReferentialContainmentRelationship;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 import com.ibm.bao.ceshell.util.DocUtil;
 
@@ -54,29 +56,39 @@ import com.ibm.bao.ceshell.util.DocUtil;
 public class FolderImportCmd extends BaseCommand {
 	
 	private static final String 
-	CMD = "folderimport", 
-	CMD_DESC = "import a folder recursively to a local folder",
-	HELP_TEXT = CMD_DESC +
-		"\nUsage:" +
-		"\n\tfolderimpot -targetFileNetFolderURI <target-parent-folder>  <src-filesystem-folder>" +
-		"\nfolderexport -targetFileNetFolderURI /temp  c:/temp/docs" +
-		"\n\timports c:/temp/docs into /temp/docs. " +
-		" If any file or folder exists within FileNet with the same name, it is skipped.";
+		CMD = "folderimport", 
+		CMD_DESC = "import a file system folder recursively to a FileNet folder",
+		HELP_TEXT = CMD_DESC +
+			"\nUsage:" +
+			"\nfolderimpot -src <fs-dir>  -dest <FN-folder-uri> -docclass <SymbolicName>" +
+			"\nfolderimport -src c:/temp/docs -dest /MyDocs -docclass MyDoc" +
+			"\n\nPre-existing Files in FileNet:" +
+			"\n\tFiles or folder with the same name in the target are skipped." +
+			"\n\n Hidden Files and folders:\n" +
+			"\n\tThis follows the UNIX convention of \"hidden\" folders or files starting with " +
+			"\n\ta period character. These files are ignored by default";
 	
 	public static final String
-		FILENET_FOLDER_URI_OPT = "folder-uris",
-		DOCCLASS_DEFAULT = "docclass-default",	// default docclass for new docs
-		SRC_DIR = "src-folder";
+		DEST_FILENET_FOLDER_URI_OPT = "dest-folder-uris",
+		DOCCLASS_DEFAULT_OPT = "docclass-default",	// default docclass for new docs
+		SRC_DIR_OPT = "src-fs-folder";
 		
-
+	
+	/**
+	 *   Hidden directories and files start with a '.' character.
+	 *   By default, ignore files and folder that start with this character
+	 */
+	private static final char HIDDEN_FILE_OR_FOLDER_PREFIX = '.';
+	
 	/* (non-Javadoc)
 	 * @see com.ibm.bao.ceshell.BaseCommand#doRun(jcmdline.CmdLineHandler)
 	 */
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
-		StringParam fileNetFolderUriOpt = (StringParam) cl.getOption(FILENET_FOLDER_URI_OPT);
-		StringParam docClassDefaultOpt = (StringParam) cl.getOption(DOCCLASS_DEFAULT);
-		FileParam srcDirArg = (FileParam) cl.getArg(SRC_DIR);
+		StringParam fileNetFolderUriOpt = (StringParam) cl.getOption(DEST_FILENET_FOLDER_URI_OPT);
+		FileParam srcDirOpt = (FileParam) cl.getOption(SRC_DIR_OPT);
+		StringParam docClassDefaultOpt = (StringParam) cl.getOption(DOCCLASS_DEFAULT_OPT);
+		
 		String fileNetFolderUri = null;
 		String docClassDefault = null;
 		File srcDir = null;
@@ -85,12 +97,11 @@ public class FolderImportCmd extends BaseCommand {
 		if (docClassDefaultOpt.isSet()) {
 			docClassDefault = docClassDefaultOpt.getValue();
 		}
-		srcDir = srcDirArg.getValue();
-		
+		srcDir = srcDirOpt.getValue();
 		
 		FolderImportRequestVO requestVO = createImportVO(fileNetFolderUri, docClassDefault, srcDir);
 		
-		return doFolderImport(requestVO);
+		return folderImport(requestVO);
 		
 	}
 	
@@ -98,9 +109,8 @@ public class FolderImportCmd extends BaseCommand {
 	 * @param requestVO
 	 * @return
 	 */
-	public boolean doFolderImport(
+	public boolean folderImport(
 			FolderImportRequestVO requestVO) throws Exception {
-		// TODO Auto-generated method stub
 		String fileNetFolderUri = requestVO.getFileNetFolderUri();
 		Folder parentFolder = fetchFileNetFolder(fileNetFolderUri);
 		if (parentFolder == null) {
@@ -135,48 +145,6 @@ public class FolderImportCmd extends BaseCommand {
 		return folder;
 	}
 
-//	/* (non-Javadoc)
-//	 * @see com.ibm.bao.ceshell.BaseCommand#getCommandLine()
-//	 */
-//	/**
-//	 * @param outputDir
-//	 * @param fileNetFolderUris
-//	 */
-//	private boolean doImortFolders(FolderImportRequestVO requestVO) {
-//		List<Folder> srcFolders = new ArrayList<Folder>();
-//		List<String> fileNetFolderUris = requestVO.getFileNetFolderUris();
-//		
-//		for (String folderuri : fileNetFolderUris) {
-//			String decodedUri = getShell().urlDecode(folderuri);
-//			String fullPath = this.getShell().getCWD().relativePathToFullPath(decodedUri);
-//			Folder folder = this.getShell().getFolder(fullPath);
-//			srcFolders.add(folder);
-//		}
-//		
-//		
-//		
-//		doExportFolders(requestVO, srcFolders);
-//		return true;
-//	}
-//	
-//
-//
-//	/**
-//	 * @param outputDir
-//	 * @param srcFolders
-//	 */
-//	private boolean doImportFolder(FolderImportRequestVO requestVO) {
-//		int depth = 0;
-//		File inputDir = requestVO.getInputDir();
-//		
-//		for (Folder srcFolder : srcFolders) {
-//			doImportFolder(depth, inputDir, srcFolder);
-//		}
-//		
-//		return true;
-//		
-//	}
-
 	/**
 	 * @param srcFileSystemFolder
 	 * @param destFNFolder
@@ -194,10 +162,14 @@ public class FolderImportCmd extends BaseCommand {
 		
 		File[] childFiles = srcFileSystemFolder.listFiles();
 		for (File child : childFiles) {
-			if (child.isDirectory()) {
-				childFileSysFolders.add(child);
-			} else if (child.isFile()) {
-				childFileSysFiles.add(child);
+			if (shouldIgnore(child)) {
+				System.out.println("Ignoring " + child.getName() + " as hidden or ignore criteria");
+			} else {
+				if (child.isDirectory()) {
+					childFileSysFolders.add(child);
+				} else if (child.isFile()) {
+					childFileSysFiles.add(child);
+				}
 			}
 		}
 		
@@ -210,17 +182,30 @@ public class FolderImportCmd extends BaseCommand {
 	}
 
 	/**
+	 * @param child
+	 * @return
+	 */
+	private boolean shouldIgnore(File child) {
+		String name = child.getName();;
+		if (name.charAt(0) == HIDDEN_FILE_OR_FOLDER_PREFIX) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @param childFNFolder
 	 * @param childFileSysFiles
 	 */
 	private void importFilesIntoFolder(FolderImportRequestVO requestVO, Folder childFNFolder,
 			List<File> childFileSysFiles) throws Exception {
 		
-		Set<String> existingChildren = new HashSet<String>();
+		Set<String> existingChildren = fetchExistingChildren(childFNFolder);
+		//childFNFolder.get_
 		for (File childFileSysFile : childFileSysFiles) {
 			String childFileName = childFileSysFile.getName();
 			if (existingChildren.contains(childFileName)) {
-				// notify child already exists
+				getResponse().printOut("found file in folder: " + childFileName);
 			} else {
 				try {
 					importFileToFolder(requestVO, childFNFolder, childFileSysFile, childFileName);
@@ -232,6 +217,19 @@ public class FolderImportCmd extends BaseCommand {
 				}
 			}
 		}
+	}
+
+	public Set<String> fetchExistingChildren(Folder childFNFolder) throws Exception {
+		Set<String> existingChildren = new HashSet<String>();
+		ReferentialContainmentRelationshipSet rcrSet =  childFNFolder.get_Containees();
+		Iterator<?> iter = rcrSet.iterator();
+		while (iter.hasNext()) {
+			ReferentialContainmentRelationship rcr = (ReferentialContainmentRelationship) iter.next();
+			String rcrName = rcr.get_ContainmentName();
+			existingChildren.add(rcrName);
+		}
+		
+		return existingChildren;
 	}
 
 	/**
@@ -273,7 +271,7 @@ public class FolderImportCmd extends BaseCommand {
 			Folder nextChildFolder = (Folder) iter.next();
 			String childName = nextChildFolder.get_FolderName();
 			if (srcFileSystemFolderName.equals(childName)) {
-	
+				getResponse().printOut("found existing child folder " + nextChildFolder.get_PathName());
 				return nextChildFolder;
 			}
 		}
@@ -284,55 +282,10 @@ public class FolderImportCmd extends BaseCommand {
 		**/
 		Folder newChildFolder = destFNFolder.createSubFolder(srcFileSystemFolderName);
 		newChildFolder.save(RefreshMode.REFRESH);
+		getResponse().printOut("Created child folder " + newChildFolder.get_PathName());
 		return newChildFolder;
 			
 	}
-
-//	/**
-//	 * Export just the first  content element
-//	 * @param localOutDir
-//	 * @param nextDoc
-//	 */
-//	private void doImportDoc(File localOutDir, Document nextDoc)  throws Exception {
-//			ContentElementList ceList = nextDoc.get_ContentElements();
-//			String docName = nextDoc.get_Name();
-//			
-//			if (ceList.size() == 0) {
-//				// TODO: empty-size file
-//				return;
-//			}
-//			
-//			ContentElement nextContent = (ContentElement) ceList.get(0);
-//			ContentTransfer ct = (ContentTransfer) nextContent;
-//			Double contentSize = ct.get_ContentSize();
-//			File nextOutputFile = new File(localOutDir, docName);
-//
-//			storeLocalFile(nextOutputFile, contentSize, ct);
-//			getResponse().printOut("\t" + nextOutputFile.toString());
-//		}
-//
-//		private void storeLocalFile(
-//				File actualFileStored,  
-//				Double contentSize,
-//				ContentTransfer ct) throws Exception {
-//			InputStream inputStream = null;
-//			OutputStream outputStream = null;
-//			try {
-//				inputStream = ct.accessContentStream();
-//				outputStream = new FileOutputStream(actualFileStored);
-//				byte[] nextBytes = new byte[64000];
-//				int nBytesRead;
-//				while ((nBytesRead = inputStream.read(nextBytes)) != -1) {
-//					outputStream.write(nextBytes, 0, nBytesRead);
-//					outputStream.flush();
-//				}
-//				outputStream.close();
-//				inputStream.close();
-//			} finally {
-//				outputStream = null;
-//				inputStream = null;
-//			}
-//		}
 		
 
 	/* (non-Javadoc)
@@ -342,38 +295,43 @@ public class FolderImportCmd extends BaseCommand {
 	protected CmdLineHandler getCommandLine() {
 		// create command line handler
 		CmdLineHandler cl = null;
-		StringParam filenetFolderUriOpt = null;
+		StringParam destFilenetFolderUriOpt = null;
 		StringParam docClassDefaultOpt = null;
-		FileParam srcDirArg = null;
+		FileParam srcDirOpt = null;
 
-		// params
+		// Options
 		{
-			filenetFolderUriOpt = new StringParam(FILENET_FOLDER_URI_OPT, "folder-uri",
+			srcDirOpt = new FileParam(SRC_DIR_OPT,
+					"local file system folder",
+					FileParam.IS_DIR & FileParam.IS_READABLE,
+					FileParam.REQUIRED);
+		}
+		
+		{
+			destFilenetFolderUriOpt = new StringParam(DEST_FILENET_FOLDER_URI_OPT, "folder-uri",
 					StringParam.REQUIRED);
-			filenetFolderUriOpt.setMultiValued(Boolean.FALSE);
-			filenetFolderUriOpt.setOptionLabel("<dest-filenet-folder-uri>");
+			destFilenetFolderUriOpt.setMultiValued(Boolean.FALSE);
+			destFilenetFolderUriOpt.setOptionLabel("<dest-filenet-folder-uri>");
 		}
 		{
 			docClassDefaultOpt = new StringParam(
-					DOCCLASS_DEFAULT,
+					DOCCLASS_DEFAULT_OPT,
 					"FileNet Documet class to use as default for documents (defaults to \"Document\"",
 					StringParam.OPTIONAL);
 			docClassDefaultOpt.setMultiValued(StringParam.SINGLE_VALUED);
 			docClassDefaultOpt.setOptionLabel("<docclass-default");
 		}
-	
+		
+		
 		// cmd args
 		
-		srcDirArg = new FileParam(SRC_DIR,
-				"local file system folder",
-				FileParam.IS_DIR & FileParam.IS_WRITEABLE,
-				FileParam.REQUIRED);
+		
 		
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] { filenetFolderUriOpt, docClassDefaultOpt }, 
-					new Parameter[] {srcDirArg });
+					new Parameter[] {srcDirOpt, destFilenetFolderUriOpt, docClassDefaultOpt}, 
+					new Parameter[] { });
 		cl.setDieOnParseError(false);
 		
 		return cl;

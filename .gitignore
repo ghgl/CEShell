@@ -1,1 +1,8 @@
 .project
+.classpath
+.pydevproject
+.settings/
+classes/
+*.7z
+ceshell-dist/
+bh-props/

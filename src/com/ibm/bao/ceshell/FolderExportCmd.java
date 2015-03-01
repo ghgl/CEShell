@@ -64,18 +64,10 @@ public class FolderExportCmd extends BaseCommand {
 		
 		FolderExportRequestVO requestVO = createExportVO(outputDir, fileNetFolderUris);
 		
-		return doExportFolders(requestVO);
+		return exportFolders(requestVO);
 		
 	}
-
-	public FolderExportRequestVO createExportVO(File outputDir,
-			List<String> fileNetFolderUris) {
-		FolderExportRequestVO requestVO = new FolderExportRequestVO();
-		requestVO.setOutputDir(outputDir);
-		requestVO.setFileNetFolderUris(fileNetFolderUris);
-		return requestVO;
-	}
-
+	
 	/* (non-Javadoc)
 	 * @see com.ibm.bao.ceshell.BaseCommand#getCommandLine()
 	 */
@@ -83,7 +75,7 @@ public class FolderExportCmd extends BaseCommand {
 	 * @param outputDir
 	 * @param fileNetFolderUris
 	 */
-	private boolean doExportFolders(FolderExportRequestVO requestVO) {
+	public boolean exportFolders(FolderExportRequestVO requestVO) {
 		List<Folder> srcFolders = new ArrayList<Folder>();
 		List<String> fileNetFolderUris = requestVO.getFileNetFolderUris();
 		
@@ -99,7 +91,14 @@ public class FolderExportCmd extends BaseCommand {
 		doExportFolders(requestVO, srcFolders);
 		return true;
 	}
-	
+
+	private FolderExportRequestVO createExportVO(File outputDir,
+			List<String> fileNetFolderUris) {
+		FolderExportRequestVO requestVO = new FolderExportRequestVO();
+		requestVO.setOutputDir(outputDir);
+		requestVO.setFileNetFolderUris(fileNetFolderUris);
+		return requestVO;
+	}
 
 
 	/**

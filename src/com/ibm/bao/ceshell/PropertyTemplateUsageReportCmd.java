@@ -270,7 +270,7 @@ public class PropertyTemplateUsageReportCmd extends BaseCommand {
 	        
 	    myObjects = search.fetchObjects(sqlObject, myPageSize, myFilter, continuable);
 	    
-	    for (Iterator iter = myObjects.iterator(); iter.hasNext();) {
+	    for (Iterator<?> iter = myObjects.iterator(); iter.hasNext();) {
 	    	PropertyTemplateInfo propTemplateInfo = null;
 	    	IndependentObject obj = (IndependentObject) iter.next();
 	    	String symbolicName = obj.getProperties().get(PropertyNames.SYMBOLIC_NAME).getStringValue();
@@ -293,7 +293,7 @@ public class PropertyTemplateUsageReportCmd extends BaseCommand {
 		for (@SuppressWarnings("rawtypes")
 		Iterator iter = cdSet.iterator(); iter.hasNext();) {
 			IndependentObject obj = (IndependentObject) iter.next();
-			String id = obj.getProperties().getIdValue(PropertyNames.ID).toString();
+			//String id = obj.getProperties().getIdValue(PropertyNames.ID).toString();
 			String clsSymbolicName = obj.getProperties().getStringValue(PropertyNames.SYMBOLIC_NAME);
 			propTemplateInfo.addUsedInClass(clsSymbolicName);
 		}

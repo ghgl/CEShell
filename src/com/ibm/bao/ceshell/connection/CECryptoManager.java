@@ -19,15 +19,12 @@ import com.ibm.bao.ceshell.util.PropertyUtil;
  */
 public class CECryptoManager {
 	private File encryptKey;
-	private File ceHomeDir;
-	
 	public static final String CRYPT_PREFIX = "crypt:";
 	
 	private static final String CESHELL_KEY_FILENAME = "ceshell.key";
 	
 	
 	public CECryptoManager(File homeDir) {
-		ceHomeDir = homeDir;
 		init(homeDir);
 	}
 	

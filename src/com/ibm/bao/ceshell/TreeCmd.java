@@ -3,11 +3,19 @@
  */
 package com.ibm.bao.ceshell;
 
-import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
+import java.util.Iterator;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import jcmdline.CmdLineHandler;
 import jcmdline.Parameter;
 import jcmdline.StringParam;
+
+import com.filenet.api.collection.RepositoryRowSet;
+import com.filenet.api.query.RepositoryRow;
+import com.filenet.api.query.SearchSQL;
+import com.filenet.api.query.SearchScope;
+import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 
 /**
  *  TreeCmd
@@ -38,18 +46,37 @@ public class TreeCmd extends BaseCommand {
 	}
 
 	/**
+	 *
 	 * @param folderUri
 	 * @return
+	 * @throws Exception 
 	 */
-	private boolean doTree(String folderUri) {
+	private boolean doTree(String folderUri) throws Exception {
 		String decodedPath = readPathFromArg(folderUri);
 		String fullFolderPath = this.getShell().getCWD().relativePathToFullPath(decodedPath);
 		
-		// select PathName from Folder where Folder.This InSubFolder('/Some/Path')
-		String query = "select FolderPath from Folder Where Folder.This  InSubFolder('" + fullFolderPath + "')";
-		
-		
-		return false;
+		SortedSet<String> results = new TreeSet<String>();
+		String query = "select PathName from Folder Where Folder.This  InSubFolder('" + fullFolderPath + "')";
+		SearchSQL sqlObject = new SearchSQL();
+	    
+	    sqlObject.setQueryString(query);
+	  
+	    SearchScope searchScope = new SearchScope(ceShell.getObjectStore());
+	    RepositoryRowSet rowSet = searchScope.fetchRows(sqlObject, null, null, new Boolean(true));
+	    
+	    Iterator<?> iter = rowSet.iterator();
+	    /** Add full folder path as first path, then add children **/
+	     
+	    results.add(fullFolderPath);
+	    while ( iter.hasNext()) {
+	    	RepositoryRow row = (RepositoryRow) iter.next();
+	    	String nextPath = row.getProperties().get("PathName").getStringValue();
+	    	results.add(nextPath);
+	    }
+	    for (String nextFolder : results) {
+			System.out.println(nextFolder);
+		}
+		return true;
 	}
 	
 	

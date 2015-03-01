@@ -4,8 +4,7 @@
 package com.ibm.bao.ceshell;
 
 import java.io.File;
-import java.util.Iterator;
-import java.util.Set;
+// import java.util.Set;
 
 /**
  *  Set
@@ -73,14 +72,14 @@ public class Env {
 	/**
 	 * 
 	 */
-	private void debugEnv() {
-		Set<String> keys = System.getenv().keySet();
-		for (String key : keys) {
-			String value = System.getenv(key);
-			System.out.println(key + "\t" + value);
-		}
-		System.getenv(CESHELL_HOME);
-		
-	}
+//	private void debugEnv() {
+//		Set<String> keys = System.getenv().keySet();
+//		for (String key : keys) {
+//			String value = System.getenv(key);
+//			System.out.println(key + "\t" + value);
+//		}
+//		System.getenv(CESHELL_HOME);
+//		
+//	}
 
 }

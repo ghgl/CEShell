@@ -16,7 +16,6 @@ import com.filenet.api.collection.PropertyDescriptionList;
 import com.filenet.api.constants.FilteredPropertyType;
 import com.filenet.api.constants.RefreshMode;
 import com.filenet.api.constants.TypeID;
-import com.filenet.api.core.Document;
 import com.filenet.api.core.Factory;
 import com.filenet.api.core.IndependentObject;
 import com.filenet.api.core.IndependentlyPersistableObject;

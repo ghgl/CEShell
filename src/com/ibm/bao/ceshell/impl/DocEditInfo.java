@@ -12,7 +12,6 @@ import com.filenet.api.collection.ContentElementList;
 import com.filenet.api.collection.PropertyDescriptionList;
 import com.filenet.api.core.ContentTransfer;
 import com.filenet.api.core.Document;
-import com.filenet.api.core.EngineObject;
 import com.filenet.api.core.Factory;
 import com.filenet.api.meta.ClassDescription;
 import com.filenet.api.meta.PropertyDescription;

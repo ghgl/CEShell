@@ -120,7 +120,6 @@ public class MkDirCmd extends BaseCommand {
 		String folderName;
 		String parentPath;
 		CWD cwd = getShell().getCWD();
-		java.util.Properties folderProps = null;
 		
 		if (folderClass != null) {
 			newFolderClassName = folderClass;

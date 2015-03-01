@@ -5,6 +5,7 @@ package com.ibm.bao.ceshell.util;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,11 +15,18 @@ import java.util.Map;
 import com.filenet.api.admin.ClassDefinition;
 import com.filenet.api.admin.PropertyDefinition;
 import com.filenet.api.admin.PropertyDefinitionObject;
+import com.filenet.api.collection.BooleanList;
 import com.filenet.api.collection.ContentElementList;
+import com.filenet.api.collection.DateTimeList;
+import com.filenet.api.collection.Float64List;
+import com.filenet.api.collection.IdList;
+import com.filenet.api.collection.Integer32List;
 import com.filenet.api.collection.PropertyDefinitionList;
 import com.filenet.api.collection.PropertyDescriptionList;
+import com.filenet.api.collection.StringList;
 import com.filenet.api.constants.AutoClassify;
 import com.filenet.api.constants.AutoUniqueName;
+import com.filenet.api.constants.Cardinality;
 import com.filenet.api.constants.CheckinType;
 import com.filenet.api.constants.ClassNames;
 import com.filenet.api.constants.DefineSecurityParentage;
@@ -33,6 +41,11 @@ import com.filenet.api.core.ReferentialContainmentRelationship;
 import com.filenet.api.meta.ClassDescription;
 import com.filenet.api.meta.PropertyDescription;
 import com.filenet.api.property.Properties;
+import com.filenet.api.property.PropertyDateTimeList;
+import com.filenet.api.property.PropertyFloat64List;
+import com.filenet.api.property.PropertyIdList;
+import com.filenet.api.property.PropertyInteger32List;
+import com.filenet.api.property.PropertyStringList;
 import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.CEShell;
 
@@ -167,7 +180,12 @@ public class DocUtil {
 			Document doc, 
 			java.util.Properties props) throws Exception {
 		Map<String, PropertyDescription> pdMap = new HashMap<String, PropertyDescription>();
+		Map<String, ArrayList<String>> multiValueProps = new java.util.HashMap<String, java.util.ArrayList<String>>(); 
+		java.util.Properties singleValueProps = new java.util.Properties();
+		
 		Properties docProps = doc.getProperties();
+		
+		
 		ClassDescription cd = fetchClassDescription(className);
 		PropertyDescriptionList pdl = cd.get_PropertyDescriptions();
 		
@@ -177,19 +195,72 @@ public class DocUtil {
 			String pdName = pd.get_SymbolicName();
 			pdMap.put(pdName, pd);
 		}
-		for (Object propName : props.keySet()) {
+		/** 
+		 * multi-valued properties are named like
+		 * myprop[0] =  "first"
+		 * myhprop[1] = "second"
+		 * 
+		 * Iterate through all properties and add to either the multiValuedProps
+		 *  or single-valued props list
+		 */
+		
+		for (Object propName: props.keySet()) {
+			String name = (String) propName;
+			String propValue = props.getProperty(name);
+			int pos = name.indexOf('[');
+			if (pos > 0) {
+				String multiValueName = name.substring(0, pos);
+				ArrayList<String> multiValues = null;
+				if (! multiValueProps.containsKey(multiValueName)) {
+					 multiValues = new ArrayList<String>();
+					 multiValueProps.put(multiValueName, multiValues);
+				} else {
+					multiValues = multiValueProps.get(multiValueName);
+				}
+				multiValues.add(propValue);
+			} else {
+				singleValueProps.setProperty(name, propValue);
+			}
+		}
+		
+		/** Apply single-valued properties **/
+		for (Object propName : singleValueProps.keySet()) {
 			String propValue = props.getProperty(propName.toString());
 			if (! pdMap.containsKey(propName))  {
 				throw new IllegalArgumentException("property with name " + propName + " was not found.");
 			}
 			PropertyDescription pd = pdMap.get(propName);
+			Cardinality card = pd.get_Cardinality();
+			
+			if (card.getValue() != Cardinality.SINGLE_AS_INT) {
+				throw new IllegalArgumentException("property with name " + propName + " with unexpected cardinality (expected single).");
+			}
 			if (pd.get_IsReadOnly()) {
 				throw new Exception(String.format("Property %s is read-only", propName));
 			}
 			applyProperty(className, docProps, pd, propName.toString(), propValue);
 		}	
+		
+		/** apply multi-valued properties **/
+		for (String propName: multiValueProps.keySet()) {
+			ArrayList<String> multiValues = multiValueProps.get(propName);
+			if (! pdMap.containsKey(propName)) {
+				throw new IllegalArgumentException("property with name " + propName + " was not found.");
+			}
+			PropertyDescription pd = pdMap.get(propName);
+			Cardinality card = pd.get_Cardinality();
+			if (card.getValue() !=  Cardinality.LIST_AS_INT) {
+				throw new IllegalArgumentException("property with name " + propName + " with unexpected cardinality (expected list).");
+			}
+			if (pd.get_IsReadOnly()) {
+				throw new Exception(String.format("Property %s is read-only", propName));
+			}
+			applyMultiValueProperty(className, docProps, pd, propName, multiValues);
+			
+		}
 	}
 	
+
 	/**
 	 * @return
 	 */
@@ -264,38 +335,35 @@ public class DocUtil {
 	
 	/**
 	 * @param pdMap
-	 * @param props
+	 * @param docProps
 	 */
-	public void applyProperty(String parentClassName, Properties props, PropertyDescription pd,
+	public void applyProperty(String parentClassName, Properties docProps, PropertyDescription pd,
 		String propName, String propValue) throws Exception {
 				
 		TypeID typeId = pd.get_DataType();
 		
 		switch(typeId.getValue()) {
 			case TypeID.STRING_AS_INT:
-				props.putValue(propName, propValue);
+				docProps.putValue(propName, propValue);
 				break;
 			case TypeID.BOOLEAN_AS_INT:
 				Boolean bValue = parseBoolean(propValue);
-				props.putValue(propName, bValue);
+				docProps.putValue(propName, bValue);
 				break;
 			case TypeID.DATE_AS_INT:
 				Date dateValue = parseDate(propValue);
-				props.putValue(propName, dateValue);
+				docProps.putValue(propName, dateValue);
 				break;
 			case TypeID.DOUBLE_AS_INT:
 				Double doubleValue = Double.parseDouble(propValue);
-				props.putValue(propName, doubleValue);
+				docProps.putValue(propName, doubleValue);
 				break;
 			case TypeID.GUID_AS_INT:
-				props.putValue(propName, propValue);
+				docProps.putValue(propName, propValue);
 				break;
 			case TypeID.LONG_AS_INT:
 				Integer intValue = Integer.parseInt(propValue);
-				props.putValue(propName, intValue);
-				break;
-			
-			default:
+				docProps.putValue(propName, intValue);
 				break;
 //			case TypeID.BINARY_AS_INT:
 //				break;	
@@ -303,12 +371,135 @@ public class DocUtil {
 				String objClasName = fetchObjectPropertyClassName(parentClassName, propName);
 				IndependentObject obj = ceShell.getObjectStore().
 						fetchObject(objClasName, propValue, null);
-				props.putValue(propName, obj);
+				docProps.putValue(propName, obj);
 //				break;
+			default:
+				break;
 				
 		}
 			
 	}
+	
+	
+	/**
+	 * @param className
+	 * @param docProps
+	 * @param pd
+	 * @param string
+	 * @param multiValues
+	 * 
+	 * TODO: THIS NEEDS A TEST
+	 * @throws Exception 
+	 */
+	@SuppressWarnings("unchecked")
+	private void applyMultiValueProperty(String className, 
+			Properties docProps,
+			PropertyDescription pd, 
+			String propName, 
+			ArrayList<String> multiValues) throws Exception {
+		TypeID typeId = pd.get_DataType();
+		
+		switch(typeId.getValue()) {
+			case TypeID.STRING_AS_INT:
+				StringList stringValueList = Factory.StringList.createList();
+				for (String propValue : multiValues) {
+					
+					stringValueList.add(propValue);
+				}
+				
+				/** 
+				 * This is weird
+				 * If I try to get the property docProps.get(propName) it returns an error
+				 * If I just use docProps.putValue(...) it does not save
+				 * If I remove the putValue, it gets an error that the property does not exist
+				 * 
+				 * however, if I do 
+				 * 		docProps.putValue(propName, stringValueList);
+				 * followed by 
+				 * 		PropertyStringList pl = (PropertyStringList) docProps.get(propName);
+				 *		pl.setValue(stringValueList);
+				 * 
+				 * Well, this seems to work.
+				 */
+				docProps.putValue(propName, stringValueList);
+				
+				PropertyStringList pl = (PropertyStringList) docProps.get(propName);
+				pl.setValue(stringValueList);
+				
+				break;
+			case TypeID.BOOLEAN_AS_INT:
+				BooleanList boolValueList = Factory.BooleanList.createList();
+				for (String propValue : multiValues) {
+					Boolean nextBoolValue = parseBoolean(propValue);
+					boolValueList.add(nextBoolValue);
+				}
+				docProps.putValue(propName, boolValueList);
+				break;
+			case TypeID.DATE_AS_INT:
+				// TODO: TEST
+				DateTimeList dateValueList = Factory.DateTimeList.createList();
+				for (String propValue : multiValues) {
+					Date dateValue = parseDate(propValue);
+					dateValueList.add(dateValue);
+				}
+				
+				docProps.putValue(propName, dateValueList);
+				PropertyDateTimeList dtpl = (PropertyDateTimeList) docProps.get(propName);
+				dtpl.setValue(dateValueList);
+				break;
+			case TypeID.DOUBLE_AS_INT:
+				// TODO: test
+				Float64List doubleValueList = Factory.Float64List.createList();
+				for (String propValue: multiValues) {
+					Double doubleValue = Double.parseDouble(propValue);
+					doubleValueList.add(doubleValue);
+				}
+				docProps.putValue(propName, doubleValueList);
+				PropertyFloat64List f64pl = (PropertyFloat64List) docProps.get(propName);
+				f64pl.setValue(doubleValueList);
+				break;
+			case TypeID.GUID_AS_INT:
+				// TODO: TEST
+				IdList idList = Factory.IdList.createList();
+				for (String propValue: multiValues) {
+					idList.add(propValue);
+				}
+				docProps.putValue(propName, idList);
+				PropertyIdList idpl = (PropertyIdList) docProps.get(propName);
+				idpl.setValue(idList);
+				break;
+			case TypeID.LONG_AS_INT:
+				// TODO: TEST
+				Integer32List intList = Factory.Integer32List.createList();
+				for (String propValue: multiValues) {
+					Integer intValue = Integer.parseInt(propValue);
+					intList.add(intValue);
+				}
+				
+				docProps.putValue(propName, intList);
+				PropertyInteger32List i32pl = (PropertyInteger32List) docProps.get(propName);
+				i32pl.setValue(intList);
+				break;
+				// 
+//			case TypeID.BINARY_AS_INT:
+				// TODO
+//				break;	
+			case TypeID.OBJECT_AS_INT:
+//				// TODO: Is there such a thing?
+//				IndependentObjectSet indObjSet = Factory.I
+//				String objClasName = fetchObjectPropertyClassName(parentClassName, propName);
+//				IndependentObject obj = ceShell.getObjectStore().
+//						fetchObject(objClasName, propValue, null);
+//				docProps.putValue(propName, obj);
+//				Prop
+//				break;
+				
+			default:
+				break;
+		}
+		
+	}
+
 
 	/**
 	 * @param propName

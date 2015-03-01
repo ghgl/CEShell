@@ -163,6 +163,7 @@ public class PropertyTemplatesLSCmd extends BaseCommand {
 		String propertyDisplayCategory = null; 
 		String dataTypeStr = null;
 		try {
+			
 			symbolicName = props.getStringValue("SymbolicName");
 			dataType = props.getInteger32Value("DataType");
 			creator = props.getStringValue("Creator");
