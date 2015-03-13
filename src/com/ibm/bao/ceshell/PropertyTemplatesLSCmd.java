@@ -157,16 +157,17 @@ public class PropertyTemplatesLSCmd extends BaseCommand {
 		String rowStr = null;
 		String symbolicName = null;
 		Integer dataType = null;
-		String creator = null;
+		@SuppressWarnings("unused")		// strange -- false flag by eclipse
+		String docCreator = null;
 		Date dateCreated = null;
+		@SuppressWarnings("unused")		// strange -- false flag by eclipse
 		String dateCreatedStr = null;
 		String propertyDisplayCategory = null; 
 		String dataTypeStr = null;
 		try {
-			
 			symbolicName = props.getStringValue("SymbolicName");
 			dataType = props.getInteger32Value("DataType");
-			creator = props.getStringValue("Creator");
+			docCreator = props.getStringValue("Creator");
 			dateCreated = props.getDateTimeValue("DateCreated");
 			propertyDisplayCategory = props.getStringValue("PropertyDisplayCategory");
 			if (propertyDisplayCategory == null) {

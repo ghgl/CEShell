@@ -132,6 +132,7 @@ public class EventQueueListCmd extends BaseCommand {
 		size = results.size();
 		ids = new String[size];
 		for (int i = 0; i < ids.length; i++) {
+			@SuppressWarnings("rawtypes")
 			Map props = results.get(i);
 			String nextId = props.get("Id").toString();
 			ids[i] = nextId;

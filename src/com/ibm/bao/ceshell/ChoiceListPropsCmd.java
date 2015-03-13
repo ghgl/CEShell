@@ -5,6 +5,10 @@ package com.ibm.bao.ceshell;
 
 import java.util.Iterator;
 
+import jcmdline.CmdLineHandler;
+import jcmdline.Parameter;
+import jcmdline.StringParam;
+
 import com.filenet.api.admin.Choice;
 import com.filenet.api.admin.ChoiceList;
 import com.filenet.api.constants.ChoiceType;
@@ -12,13 +16,8 @@ import com.filenet.api.core.Factory;
 import com.filenet.api.property.PropertyFilter;
 import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
-import com.ibm.bao.ceshell.util.ColDef;
 import com.ibm.bao.ceshell.util.QueryHelper;
 import com.ibm.bao.ceshell.util.StringUtil;
-
-import jcmdline.CmdLineHandler;
-import jcmdline.Parameter;
-import jcmdline.StringParam;
 
 /**
  *  ChoiceListProps
@@ -85,7 +84,7 @@ public class ChoiceListPropsCmd extends BaseCommand {
 		String name = cl.get_Name();
 		String displayName = cl.get_DisplayName();
 		String description = cl.get_DescriptiveText();
-		String creator = cl.get_Creator();
+		//String creator = cl.get_Creator();
 		String dataTypeStr = cl.get_DataType().toString();
 		Boolean hasHierarchy = cl.get_HasHierarchy();
 		

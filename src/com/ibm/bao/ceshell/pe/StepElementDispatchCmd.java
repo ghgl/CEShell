@@ -4,19 +4,16 @@
 package com.ibm.bao.ceshell.pe;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
-import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
-import com.ibm.bao.ceshell.util.PropertyUtil;
-
-import filenet.vw.api.VWParticipant;
-import filenet.vw.api.VWStepElement;
 
 import jcmdline.CmdLineHandler;
 import jcmdline.FileParam;
 import jcmdline.Parameter;
 import jcmdline.StringParam;
+
+import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
+import com.ibm.bao.ceshell.util.PropertyUtil;
+
+import filenet.vw.api.VWStepElement;
 
 /**
  *  StepElementDispatchCmd

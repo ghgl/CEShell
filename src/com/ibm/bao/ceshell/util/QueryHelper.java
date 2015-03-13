@@ -31,7 +31,6 @@ public class QueryHelper {
 		this.ceShell = shell;
 	}
 	
-	@SuppressWarnings("unchecked")
 	public Id fetchId(String from, String whereClause) throws Exception {
 	    SearchSQL sqlObject = new SearchSQL();
 	    String query = "select Id from " + from + " where " + whereClause;
@@ -39,10 +38,12 @@ public class QueryHelper {
 	    Id id = null;
 	    SearchScope searchScope = new SearchScope(ceShell.getObjectStore());
 	    RepositoryRowSet rowSet = searchScope.fetchRows(sqlObject, null, null, new Boolean(true));
-	    for (Iterator iter = rowSet.iterator(); iter.hasNext();) {
+	    for (@SuppressWarnings("rawtypes")
+		Iterator iter = rowSet.iterator(); iter.hasNext();) {
 	    	RepositoryRow row = (RepositoryRow) iter.next();
 	    	
-	    	for (Iterator propIter = row.getProperties().iterator(); propIter.hasNext(); ) {
+	    	for (@SuppressWarnings("rawtypes")
+			Iterator propIter = row.getProperties().iterator(); propIter.hasNext(); ) {
 	    		Property prop = (Property) propIter.next();
 	    		Object value = prop.getObjectValue();
 	    		id = new Id(value.toString());

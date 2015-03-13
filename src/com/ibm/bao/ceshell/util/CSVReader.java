@@ -31,7 +31,6 @@ public class CSVReader {
 		String line = null;
 		
 		while ((line = reader.readLine()) != null) {
-			@SuppressWarnings("unchecked")
 			List<String> fields = parser.parse(line);
 			results.add(fields);
 		}

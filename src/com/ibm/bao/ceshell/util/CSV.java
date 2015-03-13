@@ -87,9 +87,9 @@ public class CSV {
 	 * @return java.util.Iterator containing each field from the original as a
 	 *         String, in order.
 	 */
-	public List parse(String line) {
+	public List<String> parse(String line) {
 		StringBuffer sb = new StringBuffer();
-		List list = new ArrayList();
+		List<String> list = new ArrayList<String>();
 //		list.clear(); // recycle to initial state
 		int i = 0;
 

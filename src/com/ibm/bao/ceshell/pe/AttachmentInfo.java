@@ -39,7 +39,6 @@ public class AttachmentInfo {
 	public AttachmentInfo(String rawAttachmentString) {
 		ArrayList<String> results = null;
 		
-		boolean not_assigned = true;
 		String os = null;
 		String attachmentClass = null;
 		String attachmentGuid = null;
@@ -56,7 +55,6 @@ public class AttachmentInfo {
 			attachmentClass = results.get(0);
 			os = results.get(3);
 			attachmentGuid = results.get(4);
-			not_assigned = false;
 		}
 		
 		this.rawAttachmentString = rawAttachmentString;
@@ -121,7 +119,6 @@ public class AttachmentInfo {
 	 */
 	private ArrayList<String> parseRawAttachmentString(String rawAttachmentString) {
 		StringTokenizer tok = new StringTokenizer(rawAttachmentString, "|");
-		int count = tok.countTokens();
 		ArrayList<String> results  = new ArrayList<String>();
 		
 		while (tok.hasMoreTokens()) {

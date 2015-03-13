@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.ibm.bao.ceshell.AbsAclCmd;
-import com.ibm.bao.ceshell.AbsAclCmd.ACLTYPE;
 
 /**
  *  ObjectLevels

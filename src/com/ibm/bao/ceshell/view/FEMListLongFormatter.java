@@ -36,6 +36,7 @@ public class FEMListLongFormatter {
 	FieldFormatter minorVerCol;
 	FieldFormatter verStatus;
 	
+	@SuppressWarnings("unused")	// some strang reason being flagged as unused
 	private FieldFormatter[] femColDefs;
 	
 	public FEMListLongFormatter() {

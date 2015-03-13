@@ -14,6 +14,7 @@ import java.util.Map;
  * @author GaryRegier
  * @date   Sep 19, 2010
  */
+@SuppressWarnings("unchecked")
 public class DP {
 	
 	//TODO: Replace with PropertyNames.xx
@@ -361,6 +362,7 @@ public class DP {
 		VS_Label_Reservation = "3(Reservation)",
 		Vs_Label_Superseded = "4(Superseded)";
 	
+	@SuppressWarnings("rawtypes")
 	public static Map VSLabels = new Hashtable();
 	static {
 		VSLabels.put(new Integer(com.filenet.api.constants.VersionStatus.IN_PROCESS.getValue()), 

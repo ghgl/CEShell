@@ -28,6 +28,11 @@ import com.filenet.api.util.Id;
  */
 public class ObjectChangeEventAdapter implements ObjectChangeEvent {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1087396983764129555L;
+	
 	private Document sourceObject = null;
 	private ObjectStore os = null;
 

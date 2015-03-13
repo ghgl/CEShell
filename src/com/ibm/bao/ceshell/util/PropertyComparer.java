@@ -42,7 +42,8 @@ public class PropertyComparer {
 	}
 	
 	private void compareProperties(Properties expectedValues, Properties actualValues) {
-		for (Iterator iter = expectedValues.keySet().iterator(); iter.hasNext();) {
+		for (@SuppressWarnings("rawtypes")
+		Iterator iter = expectedValues.keySet().iterator(); iter.hasNext();) {
 			String propName = (String) iter.next();
 			String expectedValue = expectedValues.getProperty(propName);
 			String actualValue = actualValues.getProperty(propName);
