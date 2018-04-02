@@ -7,6 +7,8 @@ package com.ibm.bao.ceshell;
 import com.filenet.api.constants.RefreshMode;
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Factory;
+import com.filenet.api.core.ObjectStore;
+import com.filenet.api.core.VersionSeries;
 import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 
@@ -46,20 +48,26 @@ public class DocDelCmd extends BaseCommand {
 	
 	public boolean docDel(String docUri)throws Exception {
 		Document doc = null;
+		ObjectStore os = getShell().getObjectStore();
 		if (getShell().isId(docUri)) {
-			doc = Factory.Document.getInstance(getShell().getObjectStore(), 
-					"Document", 
-					new Id(docUri));
+//			doc = Factory.Document.getInstance(getShell().getObjectStore(), 
+//					"Document", 
+//					new Id(docUri));
+			doc = Factory.Document.fetchInstance(os, new Id(docUri), null);
 		} else {
 			String decodedUri = getShell().urlDecode(docUri);
 			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
-			doc = Factory.Document.getInstance(getShell().getObjectStore(), 
-					"Document", 
-					fullPath);
+//			doc = Factory.Document.getInstance(getShell().getObjectStore(), 
+//					"Document", 
+//					fullPath);
+			doc = Factory.Document.fetchInstance(os, fullPath, null);
 		} 
-		doc.delete();
+		//doc.delete();
+		VersionSeries vs = doc.get_VersionSeries();
+		vs.delete();
+		vs.save(RefreshMode.REFRESH);
 		getResponse().printOut("Deleted " + docUri);
-		doc.save(RefreshMode.NO_REFRESH);
+		
 		return true;
 	}
 	

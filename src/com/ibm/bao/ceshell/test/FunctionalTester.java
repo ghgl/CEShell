@@ -205,19 +205,29 @@ public class FunctionalTester extends BaseCommand {
 	 */
 	private List<TestStep> loadTests(String suiteName, File scriptFile) throws Exception {
 		List<TestStep> tests = new ArrayList<TestStep>();
-		BufferedReader reader = new BufferedReader(new FileReader(scriptFile));
-		String nextLine;
+		BufferedReader reader = null;
 		
-		while ((nextLine = reader.readLine()) != null) {
-			nextLine = nextLine.trim();
-			if (nextLine.startsWith("#")) {
-				continue;
+		try {
+			reader = new BufferedReader(new FileReader(scriptFile));
+			String nextLine;
+			
+			while ((nextLine = reader.readLine()) != null) {
+				nextLine = nextLine.trim();
+				if (nextLine.startsWith("#")) {
+					continue;
+				}
+				TestStep cmdTestInfo = parseCmdInfo(suiteName, nextLine);
+				if (cmdTestInfo != null) {
+					tests.add(cmdTestInfo);
+				}
 			}
-			TestStep cmdTestInfo = parseCmdInfo(suiteName, nextLine);
-			if (cmdTestInfo != null) {
-				tests.add(cmdTestInfo);
+		} finally {
+			if (reader != null) {
+				reader.close();
+				reader = null;
 			}
 		}
+		
 		return tests;
 	}
 

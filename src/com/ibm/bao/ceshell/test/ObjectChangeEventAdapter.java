@@ -500,4 +500,9 @@ public class ObjectChangeEventAdapter implements ObjectChangeEvent {
 		return sourceObject.get_Id();
 	}
 
+	public Double get_CmAuditSequence() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

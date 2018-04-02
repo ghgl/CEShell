@@ -28,8 +28,8 @@ public class DocVersionsCmd extends BaseCommand {
 	
 	private static final String 
 		CMD = "docversions", 
-		CMD_DESC = "@todo list version series",
-		HELP_TEXT = "@todo";
+		CMD_DESC = "list version series",
+		HELP_TEXT = "Ex:  docversins <doc-uri>";
 	
 	private static final String
 		URI_ARG = "URI";

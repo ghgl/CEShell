@@ -9,6 +9,8 @@ import com.filenet.api.constants.RefreshMode;
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Factory;
 import com.filenet.api.core.Folder;
+import com.filenet.api.core.ObjectStore;
+import com.filenet.api.core.VersionSeries;
 import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 
@@ -72,7 +74,7 @@ public class RMCmd extends BaseCommand {
 	 * @param fullPath
 	 * @param parentFolder
 	 */
-	private void doRMFolder(String fullPath, Folder parentFolder, Boolean recurse) {
+	private void doRMFolder(String fullPath, Folder parentFolder, Boolean recurse) throws Exception {
 		if (recurse) {
 			// delete child folders
 			{
@@ -101,10 +103,14 @@ public class RMCmd extends BaseCommand {
 	/**
 	 * @param parentFolder
 	 */
-	private void doDelFolder(Folder folder, String fullPath) {
-		folder.delete();
-		folder.save(RefreshMode.REFRESH);
-		getResponse().printOut("Deleted folder" + fullPath);
+	private void doDelFolder(Folder folder, String fullPath) throws Exception {
+		try {
+			folder.delete();
+			folder.save(RefreshMode.REFRESH);
+			getResponse().printOut("Deleted folder" + fullPath);
+		} catch (Exception e) {
+			throw new Exception("Problems deleteing folder: " + fullPath);
+		}
 	}
 
 	/**
@@ -112,12 +118,15 @@ public class RMCmd extends BaseCommand {
 	 * @param fullPath
 	 */
 	private void doDelDoc(Id docId, String fullPath) {
-		Document doc = Factory.Document.getInstance(
-				getShell().getObjectStore(), 
-				"Document", 
-				docId);
-		doc.delete();
-		doc.save(RefreshMode.NO_REFRESH);
+		ObjectStore os = getShell().getObjectStore();
+//		Document doc = Factory.Document.getInstance(
+//				getShell().getObjectStore(), 
+//				"Document", 
+//				docId);
+		Document doc = Factory.Document.fetchInstance(os, docId, null);
+		VersionSeries vs = doc.get_VersionSeries();
+		vs.delete();
+		vs.save(RefreshMode.NO_REFRESH);
 		getResponse().printOut("Deleted " + docId + " in " + fullPath);
 	}
 

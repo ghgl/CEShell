@@ -28,16 +28,18 @@ import com.filenet.api.constants.AutoClassify;
 import com.filenet.api.constants.AutoUniqueName;
 import com.filenet.api.constants.Cardinality;
 import com.filenet.api.constants.CheckinType;
-import com.filenet.api.constants.ClassNames;
 import com.filenet.api.constants.DefineSecurityParentage;
 import com.filenet.api.constants.RefreshMode;
+import com.filenet.api.constants.ReservationType;
 import com.filenet.api.constants.TypeID;
 import com.filenet.api.core.ContentTransfer;
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Factory;
 import com.filenet.api.core.Folder;
 import com.filenet.api.core.IndependentObject;
+import com.filenet.api.core.ObjectStore;
 import com.filenet.api.core.ReferentialContainmentRelationship;
+import com.filenet.api.core.VersionSeries;
 import com.filenet.api.meta.ClassDescription;
 import com.filenet.api.meta.PropertyDescription;
 import com.filenet.api.property.Properties;
@@ -64,6 +66,10 @@ public class DocUtil {
 	public DocUtil() {
 		super();
 	}
+	
+	public DocUtil(CEShell ceShell) {
+		this.ceShell = ceShell;
+	}
 
 	public void setCEShell(CEShell shell) {
 		this.ceShell = shell;
@@ -74,7 +80,7 @@ public class DocUtil {
 			List<File> srcFiles,
 			java.util.Properties props) throws Exception {
 				
-		Document doc = doCreateDocument(docClass, srcFiles, null, props, null);
+		Document doc = createDocument(docClass, srcFiles, null, props);
 		return doc;
 	}
 	
@@ -87,12 +93,12 @@ public class DocUtil {
 		Document doc = null;
 		java.util.Properties props = null;
 		
-		if (propertiesFile != null) {
-			PropertyUtil propUtil = new PropertyUtil();
-			props = propUtil.loadPropertiesFromFile(propertiesFile);
-		}
-		
-		doc = doCreateDocument(docClass, srcFiles, documentTitle, props, null);
+//		if (propertiesFile != null) {
+//			PropertyUtil propUtil = new PropertyUtil();
+//			props = propUtil.loadPropertiesFromFile(propertiesFile);
+//		}
+		DocAddDTO docInfo = new DocAddDTO(docClass, srcFiles, documentTitle, props);
+		doc = doCreateDocument(docInfo);
 		
 		return doc;
 	}
@@ -104,8 +110,10 @@ public class DocUtil {
 			String documentTitle,
 			java.util.Properties props) throws Exception {
 		Document doc = null;
-		doc = doCreateDocument(docClass, srcFiles, documentTitle, props, null);
 		
+		
+		DocAddDTO docInfo = new DocAddDTO(docClass, srcFiles, documentTitle, props);
+		doc = doCreateDocument(docInfo);
 		return doc;
 	}
 	
@@ -116,64 +124,336 @@ public class DocUtil {
 			File propertiesFile,
 			String parentFolderUri) throws Exception {
 		Document doc = null;
-		java.util.Properties props = null;
-		if (propertiesFile != null) {
-			PropertyUtil propUtil = new PropertyUtil();
-			props = propUtil.loadPropertiesFromFile(propertiesFile);
-		}
-		doc = doCreateDocument(docClass, srcFiles, documentTitle, props, parentFolderUri);
+//		java.util.Properties props = null;
+//		if (propertiesFile != null) {
+//			PropertyUtil propUtil = new PropertyUtil();
+//			props = propUtil.loadPropertiesFromFile(propertiesFile);
+//		}
+		DocAddDTO docInfo = new DocAddDTO(docClass, srcFiles, documentTitle, propertiesFile, parentFolderUri);
+		doc = doCreateDocument(docInfo);
+		//doc = doCreateDocument(docClass, srcFiles, documentTitle, props, parentFolderUri);
 		
 		return doc;
 	}
 	
-/* --------------------------------------------------------------
- *  implementation
+	public Document fetchDocumentByUri(String docUri) throws Exception {
+		Document doc = null;
+		if (ceShell.isId(docUri)) {
+			doc = Factory.Document.fetchInstance(getShell().getObjectStore(), 
+					new Id(docUri), null);
+		   
+		} else {
+			String decodedUri = getShell().urlDecode(docUri);
+			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
+			doc = Factory.Document.fetchInstance(getShell().getObjectStore(), 
+					fullPath, null);
+		}
+		
+		return doc;
+	}
+	
+
+	public Document fetchDocument(ObjectStore os, String docIdStr) throws Exception {
+		Document doc = null;
+		Id id = new Id(docIdStr);
+		doc = Factory.Document.fetchInstance(os, id, null);
+		if (doc == null) {
+			throw new Exception(String.format("Document now found with id ", docIdStr));
+		}
+		
+		Document currentVersion = (Document) doc.get_CurrentVersion();
+		return currentVersion;
+	}
+	
+	public boolean isLocked(Document doc) {
+		VersionSeries vs = doc.get_VersionSeries();
+		boolean actualLockedStatus = vs.get_IsReserved();
+		return actualLockedStatus;
+	}
+	
+	
+	/**
+	 * Pre:
+	 * 		Document is not locked
+	 * 
+	 * Action:
+	 * 		Document is locked for update (Reservation has been created)
+	 * 
+	 * Post:
+	 * 		Document reservation can be updated with updateReservation 
+	 * 		or with updateReservationAndCheckin.
+	 * 		Or, the reservation can be cancelled with cancelCheckout
+	 * 		
+	 *
+	 */
+	public boolean checkout(DocCheckoutDTO docInfo) throws Exception {
+		Document doc = fetchDocumentByUri(docInfo.getDocUri());
+				
+		if (doc == null) {
+			getShell().getResponse().printErr("No document found at " + docInfo.getDocUri());
+			return false;
+		}
+		
+		if (isLocked(doc)) {
+			throw new IllegalStateException("document is already locked");
+		}
+		
+		VersionSeries verSeries = doc.get_VersionSeries();
+		verSeries.checkout(docInfo.getReservationType(), null, null, null);
+		verSeries.save(RefreshMode.REFRESH);
+		
+		return true;
+	}
+	
+	
+	/**
+	 * Pre:
+	 * 		Document is locked
+	 * 
+	 * Action:
+	 * 		Lock has been removed:
+	 * 
+	 * Post:
+	 * 		Document ready for a new lock
+	 * 
+	 * @param os
+	 * @param docIdStr
+	 * @throws Exception
+	 */
+	public boolean cancelCheckout(DocCheckoutDTO docInfo) throws Exception {
+		Document doc = fetchDocumentByUri(docInfo.getDocUri());
+		
+		if (doc == null) {
+			getShell().getResponse().printErr("No document found at " + docInfo.getDocUri());
+			return false;
+		}
+		
+		if (! isLocked(doc)) {
+			throw new IllegalStateException("Document is not locked");
+		}
+		Document checkedOutDoc =  (Document) doc.get_Reservation();
+		doc.cancelCheckout();
+		checkedOutDoc.save(com.filenet.api.constants.RefreshMode.REFRESH);
+		return true;
+	}
+	
+//	/**
+//	 * Pre:
+//	 * 		document is locked
+//	 * 
+//	 * Actions:
+//	 * 		document is checked in
+//	 * 
+//	 * Post:
+//	 * 		new version of the document, with 
+//	 * 
+//	 * If you want to update properties at the same time as checkin, call updateReservationAndCheckin instead.
+//	 * 
+//	 * @param os
+//	 * @param docIdStr
+//	 * @param majorOrMinor
+//	 * @throws Exception
+//	 */
+//	public void checkin(ObjectStore os, String docIdStr, CheckinType majorOrMinor) throws Exception {
+//		Document doc = fetchDocument(os, docIdStr);
+//		if (! isLocked(doc)) {
+//			throw new IllegalStateException("expected the document to be locked");
+//		}
+//		Document checkedOutDoc  = (Document) doc.get_Reservation();
+//		checkedOutDoc.checkin(AutoClassify.DO_NOT_AUTO_CLASSIFY, majorOrMinor);
+//		checkedOutDoc.save(RefreshMode.REFRESH);
+//	}
+	
+	/**
+	 * Pre:
+	 * 		document is locked
+	 * 
+	 * Actions:
+	 * 		update the reserved version of the document with the new content
+	 * 
+	 * Post:
+	 * 		document remains locked, ready for either a checkin or cancel checkout
+	 * 
+	 * @param os
+	 * @param docIdStr
+	 * @param updateInfo
+	 * @throws Exception
+	 */
+	public void updateReservation(DocUpdateDTO updateInfo) throws Exception {
+		Document doc = fetchDocumentByUri(updateInfo.getDocUri());
+		VersionSeries verSeries = doc.get_VersionSeries();
+		if (! isLocked(doc)) {
+			verSeries.checkout(updateInfo.getReservationType(), null, null, null);
+			verSeries.save(RefreshMode.REFRESH);
+		}
+		
+		Document checkedOutDoc = (Document) verSeries.get_Reservation();
+		//String docClassName = doc.get_ClassDescription().getClassName();
+		String docClassName = doc.getClassName();
+		
+		if (updateInfo.hasProperties()) {
+			doSetProps(docClassName, checkedOutDoc, updateInfo.getDocProps());
+		}
+		
+		if (updateInfo.hasSrcFiles()) {
+			addContentElements(checkedOutDoc, updateInfo.getSrcFiles());
+		}
+		
+		if (updateInfo.isCheckInOnUpdate()) {
+			checkedOutDoc.checkin(null, updateInfo.getCheckinType());
+		}
+		checkedOutDoc.save(RefreshMode.REFRESH);
+	}
+	
+//	/**
+//	 * Pre:
+//	 * 		document is locked
+//	 * 
+//	 * Actions:
+//	 * 		-- update reservation
+//	 * 		-- checkin doc
+//	 * 
+//	 * Post:
+//	 * 		-- document has been updated to a new version
+//	 * 		-- new file content repalced the original file content
+//	 * 
+//	 * @param os
+//	 * @param idstr
+//	 * @param updateInfo
+//	 * @throws Exception
+//	 */
+//	public void updateReservationAndCheckin(ObjectStore os, String docIdStr,  DocUpdateDTO updateInfo) throws Exception {
+//		Document doc = fetchDocument(os, docIdStr);
+//		VersionSeries verSeries = doc.get_VersionSeries();
+//		Document checkedOutDoc = (Document) verSeries.get_Reservation();
+//		String docClassName = doc.get_ClassDescription().getClassName();
+//		
+//		//doApplyProperties(os, checkedOutDoc, updateInfo);
+//		doSetProps(docClassName, checkedOutDoc, updateInfo.getDocProps());
+//		addContentElements(checkedOutDoc, updateInfo.getSrcFiles());
+//		checkedOutDoc.checkin(null, updateInfo.getCheckinType());
+//		checkedOutDoc.save(RefreshMode.REFRESH);
+//	}
+	
+
+//	/**
+//	 * Pre:  document is not checked out
+//	 *  
+//	 * 	-- checkout a document
+//	 *  -- update the contents
+//	 *  -- checkin as new version
+//	 * 
+//	 * Post: new version created with new content  
+//	 * 
+//	 * 
+//	 * @param os
+//	 * @param idstr
+//	 * @param localFile
+//	 * @throws Exception
+//	 */
+//	public void checkInNewVersion(ObjectStore os, String docIdStr, DocUpdateDTO updateInfo) throws Exception {
+//		Document doc = fetchDocument(os, docIdStr);
+//		if (isLocked(doc)) {
+//			throw new IllegalStateException("document is already locked");
+//		}
+//		
+//		VersionSeries verSeries = doc.get_VersionSeries();
+//		verSeries.checkout(ReservationType.OBJECT_STORE_DEFAULT, null, null, null);
+//		verSeries.save(RefreshMode.REFRESH);
+//		String docClassName = doc.get_ClassDescription().getClassName();
+//		Document checkedOutDoc = (Document) verSeries.get_Reservation();
+//		
+//		doSetProps(docClassName, checkedOutDoc, updateInfo.getDocProps());
+//		addContentElements(checkedOutDoc, updateInfo.getSrcFiles());
+//		
+//		checkedOutDoc.checkin(null, updateInfo.getCheckinType());
+//		checkedOutDoc.save(RefreshMode.REFRESH);
+//	}
+	
+/* --------------------------------------------------------------------------
+ *                     implementation
+ *  -------------------------------------------------------------------------
  */
 	
-	/*
-	 * Execute the command to create the document and file if required
+	
+	/**
+	 * @param docInfo
+	 * @return
+	 * @throws Exception 
 	 */
-	protected Document doCreateDocument(
-			String docClass,
-			List<File> srcFiles, 
-			String documentTitle,
-			java.util.Properties docProps,
-			String parentFolderUri) throws Exception {
-		
+	private Document doCreateDocument(DocAddDTO docInfo) throws Exception {
 		Document doc = null;
-		boolean linkDocToFolder = (parentFolderUri == null) ? false : true;
-		String docName = null;
+		doc = Factory.Document.createInstance(
+				getShell().getObjectStore(), 
+				docInfo.getDocClass());
 		
-		if (docClass == null) {
-			docClass = ClassNames.DOCUMENT;
+		String docTitle = docInfo.getDocumentTitle();
+		if (docTitle != null) {
+			doc.getProperties().putValue("DocumentTitle", docTitle);
+		}
+		if (docInfo.hasProperties()) {
+			doSetProps(docInfo.getDocClass(), doc, docInfo.getDocProps());
 		}
 		
-		doc = Factory.Document.createInstance(getShell().getObjectStore(), docClass);
-		
-		
-		if (documentTitle != null) {
-			doc.getProperties().putValue("DocumentTitle", documentTitle);
+		if (docInfo.hasSrcFiles()) {
+			addContentElements(doc, docInfo.getSrcFiles());
 		}
-		// Set document properties
-		if (docProps != null) {
-			
-			doSetProps(docClass, doc, docProps);
-		}
-		
-		if (srcFiles != null) {
-			addContentElements(doc, srcFiles);
-		}
-
 		// Check in the document
 		doc.checkin(AutoClassify.DO_NOT_AUTO_CLASSIFY, CheckinType.MAJOR_VERSION);
 		doc.save(RefreshMode.REFRESH);
-		docName = doc.get_Name();
-		if (linkDocToFolder) {
+		String docName = doc.get_Name();
+		if (docInfo.isLinkedToFolder()) {
+			String parentFolderUri = docInfo.getParentFolderUri();
 			fileInFolder(doc, parentFolderUri, docName);
 		}
 		
 		return doc;
 	}
+	/*
+	 * Execute the command to create the document and file if required
+	 * @deprecated
+	 */
+//	protected Document doCreateDocument(
+//			String docClass,
+//			List<File> srcFiles, 
+//			String documentTitle,
+//			java.util.Properties docProps,
+//			String parentFolderUri) throws Exception {
+//		
+//		Document doc = null;
+//		boolean linkDocToFolder = (parentFolderUri == null) ? false : true;
+//		String docName = null;
+//		
+//		if (docClass == null) {
+//			docClass = ClassNames.DOCUMENT;
+//		}
+//		
+//		doc = Factory.Document.createInstance(getShell().getObjectStore(), docClass);
+//		
+//		
+//		if (documentTitle != null) {
+//			doc.getProperties().putValue("DocumentTitle", documentTitle);
+//		}
+//		// Set document properties
+//		if (docProps != null) {
+//			
+//			doSetProps(docClass, doc, docProps);
+//		}
+//		
+//		if (srcFiles != null) {
+//			addContentElements(doc, srcFiles);
+//		}
+//
+//		// Check in the document
+//		doc.checkin(AutoClassify.DO_NOT_AUTO_CLASSIFY, CheckinType.MAJOR_VERSION);
+//		doc.save(RefreshMode.REFRESH);
+//		docName = doc.get_Name();
+//		if (linkDocToFolder) {
+//			fileInFolder(doc, parentFolderUri, docName);
+//		}
+//		
+//		return doc;
+//	}
 	
 	private void doSetProps(
 			String className, 

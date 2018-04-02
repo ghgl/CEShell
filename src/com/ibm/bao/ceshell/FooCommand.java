@@ -21,6 +21,8 @@ import jcmdline.CmdLineHandler;
 import jcmdline.Parameter;
 import jcmdline.StringParam;
 
+import com.FileNetFacade;
+import com.UpdateDTO;
 import com.filenet.api.admin.AddOnInstallationRecord;
 import com.filenet.api.admin.ClassDefinition;
 import com.filenet.api.admin.EventQueueItem;
@@ -39,6 +41,7 @@ import com.filenet.api.collection.PropertyDescriptionList;
 import com.filenet.api.collection.RepositoryRowSet;
 import com.filenet.api.collection.SubsystemConfigurationList;
 import com.filenet.api.constants.Cardinality;
+import com.filenet.api.constants.CheckinType;
 import com.filenet.api.constants.FilteredPropertyType;
 import com.filenet.api.constants.PropertyNames;
 import com.filenet.api.constants.RefreshMode;
@@ -152,11 +155,148 @@ public class FooCommand extends BaseCommand {
 //		testVersionSeries();
 //		testEventQueueList();
 //		testEventQueueListxx();
-		testCustomObjectLock();
+// 		testCustomObjectLock();
+		testFilenetFacade();
 		return true;
 	}
 	
-/**
+	/**
+	 * 
+	 */
+	private void testFilenetFacade() {
+		FileNetFacade facade = new FileNetFacade();
+		String docIdStr = "{D57FC2BF-2075-4103-BCA9-D32DF17F99FD}";
+		String ver2 = "this is test 1",
+			 ver3 = "this is test 2";
+		
+		Document doc = null;
+		
+		ObjectStore os = getObjectStore();
+		boolean result = false;
+		try {
+			
+			{
+				log("start test:  checkout/cancelcheckout");
+				facade.checkout(os, docIdStr);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, true, 1, 0);
+				
+				facade.cancelCheckout(os, docIdStr);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, false, 1, 0);
+				log("checkout/cancelcheckout: " + result);
+			}
+			
+			{
+				log("start test:  checkout/checkin (no change)");
+				facade.checkout(os, docIdStr);
+				facade.checkin(os, docIdStr, CheckinType.MAJOR_VERSION);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, false, 2, 0);
+				log("checkout/checkin (no change): " + result);
+			}
+			
+			{
+				log("start test:  checkout/checkin with update (new version 3)");
+				UpdateDTO updateInfo = new UpdateDTO(ver2, "ver2.txt");
+				
+				facade.checkInNewVersion(os, docIdStr, updateInfo);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, false, 3, 0);
+				log("checkout/checkin with update " + result);
+			}
+			
+			{
+				log("start test:  checkout, updateReservation, cancel");
+				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
+				
+				//* checkout
+				facade.checkout(os, docIdStr);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, true, 3, 0);
+				
+				//* update
+				facade.updateReservation(os, docIdStr, updateInfo);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, true, 3, 0);
+				
+				// cancel checkout
+				facade.cancelCheckout(os, docIdStr);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, false, 3, 0);
+			}
+			
+			{
+				log("start test:  checkout, updateReservation, checkin");
+				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
+				
+				//* checkout
+				facade.checkout(os, docIdStr);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, true, 3, 0);
+				
+				//* update
+				facade.updateReservation(os, docIdStr, updateInfo);
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, true, 3, 0);
+				
+				// checkin
+				facade.checkin(os, docIdStr, updateInfo.getCheckinType());
+				doc = facade.fetchDocument(os, docIdStr);
+				result = assertDocStatus(doc, false, 4, 0);
+				
+			}
+				
+			
+		} catch (Exception e) {
+			System.err.print(e.getMessage());
+		}
+			
+		
+	}
+	
+	boolean assertDocStatus(Document doc, 
+			boolean expectedLockStatus, 
+			int expectedMajorVersionNum, 
+			int expectedMinorVersionNum) throws Exception {
+		VersionSeries vs = doc.get_VersionSeries();
+		
+		boolean actualLockedStatus = vs.get_IsReserved();
+		int actualMajorVersionNum = doc.get_MajorVersionNumber().intValue();
+		int actualMinorVersion = doc.get_MinorVersionNumber().intValue();
+		boolean pass = true;
+		
+		if (expectedLockStatus != actualLockedStatus) {
+			System.err.println("lock status : expected " + expectedLockStatus);
+			pass = false;
+		}
+		if (expectedMajorVersionNum != actualMajorVersionNum) {
+			System.err.println("Major version:  expected " + expectedMajorVersionNum + ", actual " + actualMajorVersionNum);
+			pass = false;
+		}
+		if(expectedMinorVersionNum != actualMinorVersion) {
+			System.err.println("Major version:  expected " + expectedMajorVersionNum + ", actual " + actualMajorVersionNum);
+			pass = false;
+		}
+		return pass;	
+	}
+	
+	/**
+	 * @param string
+	 */
+	private void log(String msg) {
+		getResponse().printOut(msg);
+		
+	}
+	
+	/**
+	 * @return
+	 */
+	private ObjectStore getObjectStore() {
+		return this.getShell().getObjectStore();
+	}
+	
+	/**
 	 * 
 	 */
 	private void testCustomObjectLock() {

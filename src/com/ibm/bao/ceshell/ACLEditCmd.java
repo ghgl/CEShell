@@ -219,10 +219,12 @@ public class ACLEditCmd extends AbsAclCmd {
 	
 	private Set<String> convertListToSet(List<String> granteesToRemove) {
 		Set<String> granteesToRemoveSet = new HashSet<String>();
-		Iterator<String> granteesToRemoveIter = granteesToRemove.iterator();
-		// convert to set to make it easier to work with
-		while (granteesToRemoveIter.hasNext()) {
-			granteesToRemoveSet.add(granteesToRemoveIter.next());
+		if (granteesToRemove != null) {
+			Iterator<String> granteesToRemoveIter = granteesToRemove.iterator();
+			// convert to set to make it easier to work with
+			while (granteesToRemoveIter.hasNext()) {
+				granteesToRemoveSet.add(granteesToRemoveIter.next());
+			}
 		}
 		return granteesToRemoveSet;
 	}
