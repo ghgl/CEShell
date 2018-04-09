@@ -28,7 +28,8 @@ public class QueuesLsCmd extends BaseCommand {
 	private static final int  PROC_FLAGS = (VWSession.QUEUE_PROCESS | VWSession.QUEUE_IGNORE_SECURITY);
 
 	private static final String 
-		NON_ZERO_OPT = "non-zero";
+		NON_ZERO_OPT = "non-zero",
+		LONG_OPT = "long";
 	
 	private static final String 
 		CMD = "pe.qsls", 
@@ -43,49 +44,67 @@ public class QueuesLsCmd extends BaseCommand {
 	 */
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
+		BooleanParam longOpt = (BooleanParam) cl.getOption(LONG_OPT);
+		Boolean listLong = Boolean.FALSE;
 		BooleanParam nonZeroOpt = (BooleanParam) cl.getOption(NON_ZERO_OPT);
 		Boolean nonZero = Boolean.FALSE;
+		
+		if (longOpt.isSet()) {
+			listLong = longOpt.getValue();
+		}
 		
 		if (nonZeroOpt.isSet()) {
 			nonZero = nonZeroOpt.getValue();
 		}
-		return qeuesLs(nonZero);
+		return qeuesLs(listLong, nonZero);
 
 	}
 
 	/**
 	 * 
 	 */
-	public boolean qeuesLs(Boolean nonZeroOnly) throws Exception {
+	public boolean qeuesLs(Boolean listLong, Boolean nonZeroOnly) throws Exception {
 		VWSession session = getShell().getPEConnection();
-		String[] queues = null;
+		String[] queuesNames = null;
 	
-		queues = session.fetchQueueNames(PROC_FLAGS);
-		Arrays.sort(queues);
+		queuesNames = session.fetchQueueNames(PROC_FLAGS);
+		Arrays.sort(queuesNames);
 		
 		getResponse().printOut("Work queues:");
-		for (int i = 0; i < queues.length; i++) {
-			VWQueue queue = session.getQueue(queues[i]);
+		if (listLong == Boolean.FALSE) {
+			listShort(queuesNames);
+			return true;
+		}
+		
+		for (int i = 0; i < queuesNames.length; i++) {
+			VWQueue queue = session.getQueue(queuesNames[i]);
 			int depth = queue.fetchCount();
 			if ( (nonZeroOnly.equals(Boolean.FALSE)) ||
 					(depth > 0) ) {
-				getResponse().printOut("\t" + depth + "\t" + queues[i]);
+				getResponse().printOut("\t" + depth + "\t" + queuesNames[i]);
 			}
 		}
 		
 		getResponse().printOut("-----------------------------");
 		getResponse().printOut("System queues");
-		queues = session.fetchQueueNames(SYS_FLAGS);
-		Arrays.sort(queues);
-		for (int i = 0; i < queues.length; i++) {
-			VWQueue queue = session.getQueue(queues[i]);
+		queuesNames = session.fetchQueueNames(SYS_FLAGS);
+		Arrays.sort(queuesNames);
+		for (int i = 0; i < queuesNames.length; i++) {
+			VWQueue queue = session.getQueue(queuesNames[i]);
 			int depth = queue.fetchCount();
 			if ( (nonZeroOnly.equals(Boolean.FALSE)) ||
 					(depth > 0) ) {
-					getResponse().printOut("\t" + depth + "\t" + queues[i]);
+					getResponse().printOut("\t" + depth + "\t" + queuesNames[i]);
 				}
 		}
 		return true;
+	}
+
+	private void listShort(String[] queueNames) {
+		for(String queueName: queueNames) {
+			getResponse().printOut(queueName);
+		}
+		
 	}
 
 	/* (non-Javadoc)
@@ -94,17 +113,21 @@ public class QueuesLsCmd extends BaseCommand {
 	@Override
 	protected CmdLineHandler getCommandLine() {
 		CmdLineHandler cl = null;
+		BooleanParam longOpt = null;
 		BooleanParam nonZeroOpt = null;
 		
 		// options
-		nonZeroOpt = new BooleanParam(NON_ZERO_OPT, "list queues with one or more queue items.");
+		longOpt = new BooleanParam(LONG_OPT, "list long (include counts in queues)");
+		longOpt.setOptional(BooleanParam.OPTIONAL);
+		nonZeroOpt = new BooleanParam(NON_ZERO_OPT, "list queues with one or more queue items. (only applicable of -long option");
+		nonZeroOpt.setOptional(BooleanParam.OPTIONAL);
 		
 		// cmd args
 		
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] {nonZeroOpt}, 
+					new Parameter[] {longOpt, nonZeroOpt}, 
 					new Parameter[] {});
 		cl.setDieOnParseError(false);
 

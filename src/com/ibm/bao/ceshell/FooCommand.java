@@ -156,10 +156,21 @@ public class FooCommand extends BaseCommand {
 //		testEventQueueList();
 //		testEventQueueListxx();
 // 		testCustomObjectLock();
-		testFilenetFacade();
+//		testFilenetFacade();
+		testArgs();
 		return true;
 	}
 	
+	private void testArgs() {
+		getResponse().printOut("Number of args: " + request.getArgs().length);
+		getResponse().printOut("Command line: " + request.getCmdLine());
+		int cnt = 0;
+		for(String arg: request.getArgs() ) {
+			getResponse().printOut("" + cnt + " " + arg);
+			cnt++;
+		}
+	}
+
 	/**
 	 * 
 	 */
