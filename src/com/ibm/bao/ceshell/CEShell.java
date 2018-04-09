@@ -370,7 +370,7 @@ public class CEShell {
 			requestInfo = cloneHistoricalRequestInfo( cmdId, args);
 		} else {
 			requestInfo = new BaseRequestInfo();
-			requestInfo.setArgs(StringUtil.toArray(args));
+			requestInfo.setArgs(parseArgs(args));
 			requestInfo.setCmdLine(origCmdLine);
 			requestInfo.setCmdId(cmdId);				
 		}
@@ -378,6 +378,10 @@ public class CEShell {
 		return requestInfo;
 	}
 	
+	private String[] parseArgs(String args) throws Exception {
+		return new ArgsParser(args).parse();
+	}
+
 	protected BaseRequestInfo cloneHistoricalRequestInfo(String cmdId, String args) {
 		BaseRequestInfo oldRequest =  null;
 		BaseRequestInfo  copy = null;
