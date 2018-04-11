@@ -13,6 +13,7 @@ import com.filenet.api.core.Connection;
 import com.filenet.api.core.Domain;
 import com.filenet.api.core.ObjectStore;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
+import com.ibm.bao.ceshell.util.ColDef;
 import com.ibm.bao.ceshell.util.StringUtil;
 
 /**
@@ -84,24 +85,26 @@ public class OSLSCmd extends BaseCommand {
 	@SuppressWarnings("unchecked")
 	private void listLong(Domain domain) {
 		Iterator<ObjectStore> iter = domain.get_ObjectStores().iterator();
+		ColDef[] defs = new ColDef[] { 
+				new ColDef("SymbolicName", 20, StringUtil.ALIGN_LEFT),
+				new ColDef("Name", 30, StringUtil.ALIGN_LEFT), 
+				new ColDef("Description", 40, StringUtil.ALIGN_LEFT)
+		};
+		
+		getResponse().printOut(StringUtil.formatHeader(defs, " "));
+		
 		while (iter.hasNext()){
 			StringBuffer buf = new StringBuffer();
 			ObjectStore os = iter.next();
+			String symbolicName = os.get_SymbolicName();
 			String name = os.get_Name();
-//			String state = "?sdate?";  // don't know where this comes from
-			String jndiDS = os.get_JNDIDataSource();
-			String jndiDSXA = os.get_JNDIXADataSource();
-			String dbType = os.get_DatabaseType().toString();
-			String siteName = os.get_Site().get_DisplayName();
-			
-			buf.append(StringUtil.padLeft(name, ".", 15));
-//			buf.append(StringUtil.padLeft(state, ".", 10));
-			buf.append(StringUtil.padLeft(jndiDS, ".", 15));
-			buf.append(StringUtil.padLeft(jndiDSXA, ".", 18));
-			buf.append(StringUtil.padLeft(dbType, ".", 10));
-			buf.append(siteName);
-			
-			getResponse().printOut(buf.toString());
+			String description = os.get_DescriptiveText();
+			String[] data = new String[] {
+				symbolicName, 
+				name, 
+				description
+			};
+			getResponse().printOut(StringUtil.formatRow(defs, data, "."));
 		}
 	}
 

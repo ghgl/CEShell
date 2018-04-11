@@ -274,7 +274,8 @@ public class CEShell {
 		boolean found = false;
 		while (iter.hasNext()){
 			ObjectStore nextOs = iter.next();
-			if (nextOs.get_Name().equals(objectStoreName)){
+			if ( (nextOs.get_Name().equals(objectStoreName)) ||
+					(nextOs.get_SymbolicName().equals(objectStoreName)) ){
 				found = true;
 				break;
 			}
