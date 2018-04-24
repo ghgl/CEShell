@@ -21,12 +21,17 @@ import jcmdline.Parameter;
  * @author GaryRegier
  * @date   Jun 25, 2011
  */
-public class QueuesLsCmd extends BaseCommand {
+public class QueuesLsCmd extends BasePECommand {
 	
 	//private static final int ALL_FLAGS = (VWSession.QUEUE_PROCESS | VWSession.QUEUE_SYSTEM | VWSession.QUEUE_IGNORE_SECURITY);
 	private static final int  SYS_FLAGS= (VWSession.QUEUE_SYSTEM | VWSession.QUEUE_IGNORE_SECURITY);
-	private static final int  PROC_FLAGS = (VWSession.QUEUE_PROCESS | VWSession.QUEUE_IGNORE_SECURITY);
-
+	private static final int QUEUE_INBOX = VWSession.QUEUE_USER_CENTRIC;
+	private static final int QUEUE_CURRENT_USER = VWSession.QUEUE_USER_CENTRIC_FOR_USER_ONLY;
+	
+	private static final int  PROC_FLAGS = (VWSession.QUEUE_USER_CENTRIC_FOR_USER_ONLY |
+			                                VWSession.QUEUE_PROCESS | 
+			                                VWSession.QUEUE_IGNORE_SECURITY);
+	
 	private static final String 
 		NON_ZERO_OPT = "non-zero",
 		LONG_OPT = "long";
@@ -64,7 +69,7 @@ public class QueuesLsCmd extends BaseCommand {
 	 * 
 	 */
 	public boolean qeuesLs(Boolean listLong, Boolean nonZeroOnly) throws Exception {
-		VWSession session = getShell().getPEConnection();
+		VWSession session = getPEConnection();
 		String[] queuesNames = null;
 	
 		queuesNames = session.fetchQueueNames(PROC_FLAGS);

@@ -12,7 +12,6 @@ import filenet.vw.api.VWFetchType;
 import filenet.vw.api.VWQueue;
 import filenet.vw.api.VWQueueElement;
 import filenet.vw.api.VWQueueQuery;
-import jcmdline.BooleanParam;
 import jcmdline.CmdLineHandler;
 import jcmdline.IntParam;
 import jcmdline.Parameter;
@@ -25,9 +24,13 @@ import jcmdline.StringParam;
  * @date Jun 25, 2011
  */
 public class QueueLsCmd extends com.ibm.bao.ceshell.pe.BasePECommand {
+	
+	public static final int DEFAULT_MAX_ITEMS = 100;
 
-	public static final String CMD = "pe.qls", CMD_DESC = "list work items in a PE queue",
-			HELP_TEXT = "Usage:" + "\npe.qls <queue-name>";
+	public static final String 
+		CMD = "pe.qls", 
+		CMD_DESC = "list work items in a PE queue. By default, only list 100 records",
+		HELP_TEXT = "Usage:" + "\npe.qls <queue-name>";
 
 	// param names
 	private static final String QUEUE_NAME_ARG = "queue-name", MAX_OPT = "max";
@@ -40,7 +43,7 @@ public class QueueLsCmd extends com.ibm.bao.ceshell.pe.BasePECommand {
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
 		String queueName = null;
-		Integer maxItems = 0;
+		Integer maxItems = DEFAULT_MAX_ITEMS;
 		IntParam maxOpt = (IntParam) cl.getOption(MAX_OPT);
 		if (maxOpt.isSet()) {
 			maxItems = maxOpt.getValue();
@@ -103,7 +106,7 @@ public class QueueLsCmd extends com.ibm.bao.ceshell.pe.BasePECommand {
 	}
 
 	private VWQueueQuery executeQuery(String queueName) throws VWException, Exception {
-		VWQueue queue = getShell().getPEConnection().getQueue(queueName);
+		VWQueue queue = getPEConnection().getQueue(queueName);
 		String queryIndex = "F_Fifo";
 		Integer fetchType = VWFetchType.FETCH_TYPE_QUEUE_ELEMENT;
 		Object[] minValues = null;
@@ -119,7 +122,7 @@ public class QueueLsCmd extends com.ibm.bao.ceshell.pe.BasePECommand {
 	}
 
 	/*
-	 * (non-Javadoc)
+	 * 
 	 * 
 	 * @see com.ibm.bao.ceshell.BaseCommand#getCommandLine()
 	 */

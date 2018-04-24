@@ -14,8 +14,12 @@ import com.ibm.bao.ceshell.util.StringUtil;
 import filenet.vw.api.VWException;
 import filenet.vw.api.VWExposedFieldDefinition;
 import filenet.vw.api.VWFieldType;
+import filenet.vw.api.VWIndexDefinition;
 import filenet.vw.api.VWQueue;
 import filenet.vw.api.VWQueueDefinition;
+import filenet.vw.api.VWWorkBasketColumnDefinition;
+import filenet.vw.api.VWWorkBasketDefinition;
+import filenet.vw.api.VWWorkBasketFilterDefinition;
 import jcmdline.BooleanParam;
 import jcmdline.CmdLineHandler;
 import jcmdline.Parameter;
@@ -33,11 +37,13 @@ public class QueueDefinitionCmd extends BasePECommand {
 		CMD = "pe.qdef", 
 		CMD_DESC = "Display the queue definition",
 		HELP_TEXT = "Usage:" +
-			"\npe.qdef <queue-name>";
+			"\n\tpe.qdef <queue-name>\n" +
+			"\nTo print just fields:\n\tpe.qdef -fields <queue-name>";
 	
 	// param names
 	protected static final String 
 		FIELDS_OPT = "fields",
+		SUMMARY_OPT = "summary",
 		QUEUE_NAME_ARG = "queue-name";
 	
 
@@ -47,20 +53,27 @@ public class QueueDefinitionCmd extends BasePECommand {
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
 		BooleanParam fieldsOpt = (BooleanParam) cl.getOption(FIELDS_OPT);
+		BooleanParam summaryOpt = (BooleanParam) cl.getOption(SUMMARY_OPT);
+		
 		String queueName = cl.getArg(QUEUE_NAME_ARG).getValue().toString();
 		Boolean fieldsDetails = false;
+		Boolean summary = false;
 		
 		if (fieldsOpt.isSet()) {
 			fieldsDetails = fieldsOpt.getValue();
 		}
-		return queueDefinition(queueName, fieldsDetails);
+		
+		if (summaryOpt.isSet()) {
+			summary = summaryOpt.getValue();
+		}
+		return queueDefinition(queueName, fieldsDetails, summary);
 
 	}
 
 	/**
 	 * @param queueName
 	 */
-	public boolean queueDefinition(String queueName, Boolean fieldsDetails) throws Exception {
+	public boolean queueDefinition(String queueName, Boolean fieldsDetails, Boolean summary) throws Exception {
 		VWQueue q = getPEConnection().getQueue(queueName);
 		VWQueueDefinition qd = null;
 		
@@ -69,12 +82,142 @@ public class QueueDefinitionCmd extends BasePECommand {
 		}
 		qd = q.fetchQueueDefinition();
 		
-		if (fieldsDetails == Boolean.FALSE) {
-			displayXmlResults(qd);
-		} else {
+		if (summary == Boolean.TRUE) {
+			displaySummary(queueName, qd);
+		} else if (fieldsDetails == Boolean.TRUE) {
 			displayQueueFields(queueName, qd);
-		}
+		} else {
+			displayXmlResults(qd);
+		} 
 		return true;
+	}
+
+	private void displaySummary(String queueName, VWQueueDefinition qd) {
+		displayQueueFields(queueName, qd);
+		displayInbaskets(queueName, qd);
+		displayIndexDefinitions(queueName, qd);
+	}
+
+	private void displayIndexDefinitions(String queueName, VWQueueDefinition qd) {
+		getResponse().printOut("\n\nIndex Definitions for queue" + queueName);
+		VWIndexDefinition[] indexDefs = qd.getIndexes();
+		if (indexDefs == null) {
+			getResponse().printOut("\t(No index definitions)");
+			return;
+		}
+		
+		for (VWIndexDefinition indexDef : indexDefs) {
+			getResponse().printOut("\tIndex Name:\t" + indexDef.getName());
+			getResponse().printOut("\t\tFields:");
+			String[] fieldNames = indexDef.getAuthoredFieldNames();
+			if (fieldNames == null) {
+				getResponse().printOut("\t\t(No fields)");
+			} else {
+				for (String fieldName : fieldNames) {
+					getResponse().printOut("\t\t\t" + fieldName);
+				}
+			}
+		}
+	}
+
+
+	private void displayInbaskets(String queueName, VWQueueDefinition qd) {
+		getResponse().printOut("\n\nWorkbasket Definitions for queue" + queueName);
+		VWWorkBasketDefinition[] wbDefs = qd.getWorkBasketDefinitions();
+		if (wbDefs == null) {
+			getResponse().printOut("\t(none)");
+			return;
+		}
+		
+		for (VWWorkBasketDefinition wbDef : wbDefs) {
+			doDisplayWorkbasket(queueName, wbDef);
+		}
+	}
+
+	private void doDisplayWorkbasket(String queueName, VWWorkBasketDefinition wbDef) {
+		getResponse().printOut("\tWorkbasket" + queueName + "." + wbDef.getName());
+		getResponse().printOut("\t\tQueryFilter: " + wbDef.getQueryFilterString());
+		getResponse().printOut("\t\tCol Defs:");
+		VWWorkBasketColumnDefinition[] wbColDefs = wbDef.getWorkBasketColumnDefinitions();
+		if (wbColDefs == null) {
+			getResponse().printOut("\t(no columns");
+			return;
+		}
+		
+		ColDef[] cols = {
+				new ColDef("Prompt", 40, StringUtil.ALIGN_LEFT),
+				new ColDef("Index name", 20, StringUtil.ALIGN_LEFT),
+				new ColDef("Sortable", 5, StringUtil.ALIGN_RIGHT)
+		};
+		getResponse().printOut(StringUtil.formatHeader(cols, " "));
+		SortedSet<VWWorkBasketColumnDefinition> sortedWBDefs = new TreeSet<VWWorkBasketColumnDefinition>( new Comparator<VWWorkBasketColumnDefinition>() {
+
+			public int compare(VWWorkBasketColumnDefinition lhs, VWWorkBasketColumnDefinition rhs) {
+				return (lhs.getPrompt().compareTo(rhs.getPrompt()));
+			}
+		});
+		
+		for (VWWorkBasketColumnDefinition vwWorkBasketColumnDefinition : wbColDefs) {
+			sortedWBDefs.add(vwWorkBasketColumnDefinition);
+		}
+		
+		for (VWWorkBasketColumnDefinition vwWorkBasketColumnDefinition : sortedWBDefs) {
+			String[] fields = new String[] {
+				vwWorkBasketColumnDefinition.getPrompt(),
+				vwWorkBasketColumnDefinition.getIndexName(),
+				new Boolean(vwWorkBasketColumnDefinition.isSortable()).toString()
+			};
+			getResponse().printOut(StringUtil.formatRow(cols, fields, " "));
+		}
+		
+		/** show filter definitions for inbasket **/
+		getResponse().printOut("\tFilter definitions for inbasket "  + queueName + "." + wbDef.getName());
+		VWWorkBasketFilterDefinition[] filterDefs = wbDef.getWorkBasketFilterDefinitions();
+		if (filterDefs == null) {
+			getResponse().printOut("\t\t(no Filter definitions)");
+		}
+		
+		ColDef[] filterCols = {
+				new ColDef("name", 5, StringUtil.ALIGN_LEFT),
+				new ColDef("Description", 20, StringUtil.ALIGN_LEFT),
+				new ColDef("Prompt", 30, StringUtil.ALIGN_LEFT),
+				new ColDef("fieldName", 20, StringUtil.ALIGN_LEFT),
+				new ColDef("type", 8, StringUtil.ALIGN_LEFT),
+				new ColDef("oper", 5, StringUtil.ALIGN_RIGHT)
+		};
+		getResponse().printOut(StringUtil.formatHeader(filterCols, " "));
+		
+		
+		for (VWWorkBasketFilterDefinition filterDef : filterDefs) {
+			String fieldName = "null";
+			{
+				VWExposedFieldDefinition efd = filterDef.getSearchField();
+				if (efd != null) {
+					String efdname = efd.getName();
+					if (efdname != null) {
+						fieldName = efdname;
+					}
+				}
+			}
+			
+			
+			String name = filterDef.getName();
+			String desc = filterDef.getDescription();
+			String prompt = filterDef.getPrompt();
+			//String type = "" + filterDef.getType();
+			String type = VWFieldType.getLocalizedString(filterDef.getType());
+			String operator = "" + filterDef.getOperator();
+			
+			String[] filterData = {
+					name,
+					desc,
+					prompt,
+					fieldName,
+					type,
+					operator
+			};
+			getResponse().printOut(StringUtil.formatRow(filterCols, filterData, "."));
+		}
 	}
 
 	private void displayQueueFields(String queueName, VWQueueDefinition qd) {
@@ -107,7 +250,7 @@ public class QueueDefinitionCmd extends BasePECommand {
 		ColDef[] cols = {
 				new ColDef("Man", 3, StringUtil.ALIGN_LEFT),
 				new ColDef("Name", 30, StringUtil.ALIGN_LEFT),
-				new ColDef("Type", 8, StringUtil.ALIGN_RIGHT),
+				new ColDef("Type", 8, StringUtil.ALIGN_LEFT),
 				new ColDef("Len", 5, StringUtil.ALIGN_RIGHT),
 				new ColDef("SourceName", 25, StringUtil.ALIGN_LEFT),
 				new ColDef("ValueProvider", 35, StringUtil.ALIGN_LEFT)
@@ -159,12 +302,16 @@ public class QueueDefinitionCmd extends BasePECommand {
 		// create command line handler
 		CmdLineHandler cl = null;
 		BooleanParam fieldsOpt = null;
+		BooleanParam summaryOpt = null;
 		StringParam queueNameArg = null;
 		
 		
 		// options
 		fieldsOpt = new BooleanParam(FIELDS_OPT, "Display field definitions");
 		fieldsOpt.setOptional(BooleanParam.OPTIONAL);
+		
+		summaryOpt = new BooleanParam(SUMMARY_OPT, "Queus Summary");
+		summaryOpt.setOptional(BooleanParam.OPTIONAL);
 		
 		// cmd args
 		queueNameArg = new StringParam(QUEUE_NAME_ARG, 
@@ -175,7 +322,7 @@ public class QueueDefinitionCmd extends BasePECommand {
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] { fieldsOpt }, 
+					new Parameter[] { fieldsOpt, summaryOpt }, 
 					new Parameter[] { queueNameArg });
 		cl.setDieOnParseError(false);
 

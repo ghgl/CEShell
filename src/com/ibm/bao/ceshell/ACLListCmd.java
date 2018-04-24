@@ -100,7 +100,7 @@ public class ACLListCmd extends AbsAclCmd {
 		SortedSet<String> permissionsSet = new TreeSet<String>();
 		Iterator<com.filenet.api.security.AccessPermission> iter = 
 			apl.iterator();
-		int[] cols = {4, 65, 6, 15, 10, 25, 20};
+		int[] cols = {4, 80, 6, 15, 10, 25, 20};
 		getResponse().printOut("ACL Entries for (type: " + objectType + "): " + (pathUri == null ? "<null>" : pathUri));
 		formatRowHeader(cols, "a/d", "Grantee", "type", "source", "Level", "Description", "Depth");
 		

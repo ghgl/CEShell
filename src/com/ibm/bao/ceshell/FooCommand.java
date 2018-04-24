@@ -157,10 +157,17 @@ public class FooCommand extends BaseCommand {
 //		testEventQueueListxx();
 // 		testCustomObjectLock();
 //		testFilenetFacade();
-		testArgs();
+//		testArgs();
+		testFind();
 		return true;
 	}
 	
+	private void testFind() {
+		//String query = "select top 100 d.ObjectType, d.ClassDescription, d.id, d.Name, d.DateCreated FROM Document d order by DateCreated asc"
+				
+		
+	}
+
 	private void testArgs() {
 		getResponse().printOut("Number of args: " + request.getArgs().length);
 		getResponse().printOut("Command line: " + request.getCmdLine());

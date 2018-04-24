@@ -4,23 +4,30 @@
 package com.ibm.bao.ceshell.pe;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Properties;
-
-import jcmdline.CmdLineHandler;
-import jcmdline.Parameter;
-import jcmdline.StringParam;
 
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 import com.ibm.bao.ceshell.cmdline.VersionCmdLineHandler;
+import com.ibm.bao.ceshell.util.ColDef;
 import com.ibm.bao.ceshell.util.PropertyUtil;
+import com.ibm.bao.ceshell.util.StringUtil;
 
 import filenet.vw.api.VWApplicationSpaceDefinition;
+import filenet.vw.api.VWFetchType;
 import filenet.vw.api.VWParameter;
 import filenet.vw.api.VWParticipant;
+import filenet.vw.api.VWQueue;
+import filenet.vw.api.VWQueueElement;
+import filenet.vw.api.VWQueueQuery;
 import filenet.vw.api.VWRoleDefinition;
 import filenet.vw.api.VWStepElement;
 import filenet.vw.api.VWSystemConfiguration;
 import filenet.vw.api.VWWorkBasketDefinition;
+import jcmdline.CmdLineHandler;
+import jcmdline.Parameter;
+import jcmdline.StringParam;
 
 /**
  * FooPe
@@ -46,9 +53,73 @@ public class FooPeCmd extends BasePECommand {
 		}
 		// stTst();
 		// doTstSetValues();
-		//doTestVWSystemConfiguration();
-		doTestMatches();
+		doTestVWSystemConfiguration();
+		//doTestMatches();
+		//doTestInboxQuery();
 		return true;
+	}
+
+	private void doTestInboxQuery() throws Exception {
+		ColDef[] defs = new ColDef[] { 
+				new ColDef("WobNum", 32, StringUtil.ALIGN_LEFT),
+				new ColDef("F_BoundUser", 24, StringUtil.ALIGN_LEFT),
+				new ColDef("F_CaseFolder", 40, StringUtil.ALIGN_LEFT),
+				new ColDef("Name", 30, StringUtil.ALIGN_LEFT), new ColDef("Step Name", 30, StringUtil.ALIGN_LEFT),
+				new ColDef("Status", 14, StringUtil.ALIGN_LEFT), new ColDef("Received On", 28, StringUtil.ALIGN_LEFT),
+				new ColDef("Workflow name", 33, StringUtil.ALIGN_LEFT),
+				new ColDef("LockOwner", 20, StringUtil.ALIGN_LEFT) };
+		
+		getResponse().printOut(StringUtil.formatHeader(defs, " "));
+		VWQueue queue = getPEConnection().getQueue("Inbox(0)");
+		String queryIndex = "F_Fifo";
+		Integer fetchType = VWFetchType.FETCH_TYPE_QUEUE_ELEMENT;
+		Object[] minValues = null;
+		Object[] maxValues = null;
+		int queryFlags = VWQueue.QUERY_READ_BOUND + VWQueue.QUERY_READ_LOCKED;
+		Object[] substitutionVars = null;
+		String filter = null;
+
+		// TODO. Verify this works if an item is locked.
+		VWQueueQuery queueQuery = queue.createQuery(queryIndex, minValues, maxValues, queryFlags, filter,
+				substitutionVars, fetchType);
+		
+		int cnt = 0;
+		int maxItems = 100;
+		
+		while (queueQuery.hasNext()) {
+			VWQueueElement elem = (VWQueueElement) queueQuery.next();
+			String boundUser = elem.getBoundUserPx().getParticipantName();
+			String caseFolder = elem.getFieldValue("F_CaseFolder").toString();
+			String lockOwner = elem.getLockedUser();
+			String wobNum = elem.getWorkObjectNumber().toString();
+			String lockStatusDesc = "In Progress";
+			String queueDate = null;
+
+			String name = (elem.getSubject() == null ? "[undefined value]" : elem.getSubject());
+			String stepName = elem.getStepName();
+			int lockStatus = elem.getLockedStatus();
+			if (VWQueueElement.LOCKED_BY_NONE != lockStatus) {
+				lockStatusDesc = "Locked";
+			}
+			String workflowName = elem.getWorkflowName();
+			queueDate = elem.getFieldValue("F_EnqueueTime").toString();
+			String[] row = new String[] { 
+					wobNum, 
+					boundUser,
+					caseFolder,
+					name, 
+					stepName, 
+					lockStatusDesc, 
+					queueDate, 
+					workflowName, 
+					lockOwner };
+
+			getResponse().printOut(StringUtil.formatRow(defs, row, " "));
+			cnt++;
+			if ((maxItems > 0) && (cnt > maxItems)) {
+				break;
+			}
+		}
 	}
 
 	private void doTestMatches() {
@@ -61,9 +132,28 @@ public class FooPeCmd extends BasePECommand {
 				.fetchSystemConfiguration();
 		VWApplicationSpaceDefinition[] asDefs = sysConfig.getApplicationSpaceDefinitions();
 		for (VWApplicationSpaceDefinition vwApplicationSpaceDefinition : asDefs) {
-			doListDef(vwApplicationSpaceDefinition);
+			//doListDef(vwApplicationSpaceDefinition);
+			StringBuffer buf = new StringBuffer();
+			vwApplicationSpaceDefinition.toXML(buf);
+			String name = vwApplicationSpaceDefinition.getName();
+			writeToFile(buf, name);
 		}
 
+	}
+
+	private void writeToFile(StringBuffer buf, String name) {
+		FileWriter fileWriter = null;
+		File outDir = new File("C:\\data\\UCM\\as");
+		try {
+			File file = new File(outDir, name + ".xml");
+			fileWriter = new FileWriter(file);
+			fileWriter.write(buf.toString());
+			fileWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			fileWriter = null;
+		}
 	}
 
 	private void doListDef(VWApplicationSpaceDefinition appSpaceDef) {

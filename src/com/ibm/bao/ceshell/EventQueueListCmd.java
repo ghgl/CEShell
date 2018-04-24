@@ -3,6 +3,7 @@
  */
 package com.ibm.bao.ceshell;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 import com.ibm.bao.ceshell.util.ColDef;
 import com.ibm.bao.ceshell.util.QueryHelper;
 import com.ibm.bao.ceshell.util.StringUtil;
+import com.ibm.bao.ceshell.view.DateFieldFormatter;
 
 import jcmdline.CmdLineHandler;
 import jcmdline.Parameter;
@@ -85,6 +87,7 @@ public class EventQueueListCmd extends BaseCommand {
 	public void displayResults(RetrievingBatch rb) throws Exception {
 		Iterator<?> iter = rb.getBatchItemHandles(null).iterator();
 		ColDef[] defs = new ColDef[] {
+			new ColDef("Created", 20, StringUtil.ALIGN_LEFT),
 			new ColDef("EventId", 40, StringUtil.ALIGN_LEFT),
 			new ColDef("SubName", 35, StringUtil.ALIGN_LEFT),
 			new ColDef("SourceId", 40, StringUtil.ALIGN_LEFT),
@@ -93,19 +96,21 @@ public class EventQueueListCmd extends BaseCommand {
 		};
 		getResponse().printOut(StringUtil.formatHeader(defs, " "));
 		
+		DateFieldFormatter dateFormatter = new DateFieldFormatter();
 		while (iter.hasNext()) {
 			com.filenet.api.core.BatchItemHandle handle = (com.filenet.api.core.BatchItemHandle) iter.next();
 			EventQueueItem eventQueueItem = (EventQueueItem) handle.getObject();
 			String id = eventQueueItem.get_Id().toString();
+			String createDate = getCreatedDate(eventQueueItem, dateFormatter);
 			IndependentObject source = eventQueueItem.get_SourceObject();
 			String sourceSymbolicName = source.get_ClassDescription().get_SymbolicName();
 	    	String sourceObjectId = source.getProperties().getIdValue(PropertyNames.ID).toString();
-	    	String souceName = source.getProperties().getStringValue(PropertyNames.NAME);
+	    	String souceName = readStringValue(source, PropertyNames.NAME);
 	    	IndependentObject sub = eventQueueItem.get_QueuedObject();
-	    	String subName = sub.getProperties().getStringValue(PropertyNames.NAME);
-	    	
+	    	String subName = readStringValue(sub, PropertyNames.NAME);
 	    	
 			String[] row = new String[] {
+				createDate,
 				id,
 				subName,
 				sourceObjectId,
@@ -114,6 +119,24 @@ public class EventQueueListCmd extends BaseCommand {
 			};
 		
 			getResponse().printOut(StringUtil.formatRow(defs, row, " "));
+		}
+	}
+
+	private String getCreatedDate(EventQueueItem eventQueueItem, DateFieldFormatter dateFormatter) {
+		try {
+			Date createdDate = eventQueueItem.get_DateCreated();
+			return dateFormatter.format(createdDate);
+		} catch (Exception e) {
+			return "(??)";
+		}
+	}
+
+	private String readStringValue(IndependentObject source, String name) {
+		try {
+			String value  = source.getProperties().getStringValue(name);
+			return (value == null) ? "(null)" : value;
+		} catch(Exception e) {
+			return "(??)";
 		}
 	}
 	
@@ -180,5 +203,4 @@ public class EventQueueListCmd extends BaseCommand {
 
 		return cl;
 	}
-
 }
