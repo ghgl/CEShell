@@ -21,6 +21,9 @@ import com.ibm.bao.ceshell.util.StringUtil;
 
 public class ACLListCmd extends AbsAclCmd {
 	
+	int MAX_GRANTEE_LEN = 90;
+	
+	
 	public static final String 
 		CMD = "aclls", 
 		CMD_DESC = "Display the ACL list for an object",
@@ -100,7 +103,7 @@ public class ACLListCmd extends AbsAclCmd {
 		SortedSet<String> permissionsSet = new TreeSet<String>();
 		Iterator<com.filenet.api.security.AccessPermission> iter = 
 			apl.iterator();
-		int[] cols = {4, 80, 6, 15, 10, 25, 20};
+		int[] cols = {4, MAX_GRANTEE_LEN, 6, 15, 10, 25, 20};
 		getResponse().printOut("ACL Entries for (type: " + objectType + "): " + (pathUri == null ? "<null>" : pathUri));
 		formatRowHeader(cols, "a/d", "Grantee", "type", "source", "Level", "Description", "Depth");
 		
@@ -189,7 +192,9 @@ public class ACLListCmd extends AbsAclCmd {
 			String maskDescription,
 			String idDesc) {
 		StringBuffer buf = new StringBuffer();
-		
+		if (grantee.length() >= MAX_GRANTEE_LEN) {
+			grantee = grantee.substring(0, 85) + "...";
+		}
 		buf.append(StringUtil.padLeft(access_type, " ",       cols[0]));
 		buf.append(StringUtil.padLeft(grantee, " ",           cols[1]));
 		buf.append(StringUtil.padLeft(granteeType, " ",       cols[2]));
