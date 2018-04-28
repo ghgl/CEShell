@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<lockArrayList>
+    <lock>
+        <type>5</type>
+        <resource>UCM_CreateMPIP</resource>
+        <displayName>UCM_CreateMPIP</displayName>
+        <caseType>UCM_MPIP</caseType>
+        <lockedby>gregier</lockedby>
+        <timestamp>2018-04-26T16:22:27.558Z</timestamp>
+    </lock>
+    <loggedInUsers>cnarra,kmadduru,pshah,mpitta,nsukharev,nhsu</loggedInUsers>
+</lockArrayList>
