@@ -44,7 +44,8 @@ import jcmdline.StringParam;
 public class SolutionLockCmd extends BaseCommand {
 
 	private static final String CMD = "cm.slocks", CMD_DESC = "list locks on a CaseManager Solution",
-			HELP_TEXT = CMD_DESC + "\nExample:\n" + "\tcm.slocks Unified Case Manager";
+			HELP_TEXT = CMD_DESC + "\nExample:\n" + "\tcm.slocks Unified Case Manager" +
+	                            "\n\n(You must be in the Design object store first to use this)";
 
 	// param names
 	private static final String SOLUTION_NAME_ARG = "solution";
@@ -68,9 +69,20 @@ public class SolutionLockCmd extends BaseCommand {
 		
 		String querytmpl = "Select Id, CmAcmLockDefinition, DateLastModified from CmAcmSolutionLockControl where CmAcmSolutionLockControl.This InSubFolder('/IBM Case Manager/Solutions/%s')";
 		query = String.format(querytmpl, solutionName);
-		System.out.println(query);
+		
 		sqlObject.setQueryString(query);
-		rowSet = searchScope.fetchRows(sqlObject, null, null, new Boolean(true));
+		try {
+			rowSet = searchScope.fetchRows(sqlObject, null, null, new Boolean(true));
+		} catch (Exception e) {
+			String msg = e.getMessage();
+			if (msg.equals("Class \"CmAcmSolutionLockControl\" not found.")) {
+				getResponse().printErr(msg);
+				getResponse().printErr("This command requires you to be in the Design Object Store to run");
+				return false;
+			} else {
+				throw e;
+			}
+		}
 		RepositoryRow row = (RepositoryRow) rowSet.iterator().next();
 		com.filenet.api.property.Properties props = row.getProperties();
 		
