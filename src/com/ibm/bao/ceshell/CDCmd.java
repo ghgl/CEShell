@@ -1,5 +1,9 @@
 package com.ibm.bao.ceshell;
 
+import com.filenet.api.core.Factory;
+import com.filenet.api.core.Folder;
+import com.filenet.api.util.Id;
+
 import jcmdline.CmdLineHandler;
 import jcmdline.HelpCmdLineHandler;
 import jcmdline.Parameter;
@@ -35,8 +39,15 @@ public class CDCmd extends BaseCommand {
 
 
 	public boolean cd(String rawPath) {
-		String decodedPath = decodePath(rawPath);
+		String decodedPath = null;
 		String fullPath = null;
+		if (getShell().isId(rawPath)) {
+			Folder folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), 
+					new Id(rawPath), null);
+		   decodedPath = folder.get_PathName();
+		} else {
+			decodedPath = decodePath(rawPath);
+		}
 		try {
 			fullPath = getShell().getCWD().cd(decodedPath);
 			getResponse().printOut("new path: " + fullPath);
