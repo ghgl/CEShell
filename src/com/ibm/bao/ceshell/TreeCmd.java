@@ -25,6 +25,8 @@ import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
  */
 public class TreeCmd extends BaseCommand {
 	
+	private static final int MAX_ROWS = 500;
+	
 	private static final String 
 		CMD = "tree", 
 		CMD_DESC = "list the directory tree",
@@ -56,14 +58,14 @@ public class TreeCmd extends BaseCommand {
 		String fullFolderPath = this.getShell().getCWD().relativePathToFullPath(decodedPath);
 		
 		SortedSet<String> results = new TreeSet<String>();
-		String query = "select PathName from Folder Where Folder.This  InSubFolder('" + fullFolderPath + "')";
+		String query = String.format("select top %d PathName from Folder Where Folder.This  InSubFolder('%s')", MAX_ROWS, fullFolderPath);
 		SearchSQL sqlObject = new SearchSQL();
 	    
 	    sqlObject.setQueryString(query);
 	  
 	    SearchScope searchScope = new SearchScope(ceShell.getObjectStore());
 	    RepositoryRowSet rowSet = searchScope.fetchRows(sqlObject, null, null, new Boolean(true));
-	    
+	    int cnt = 1;
 	    Iterator<?> iter = rowSet.iterator();
 	    /** Add full folder path as first path, then add children **/
 	     
@@ -72,10 +74,15 @@ public class TreeCmd extends BaseCommand {
 	    	RepositoryRow row = (RepositoryRow) iter.next();
 	    	String nextPath = row.getProperties().get("PathName").getStringValue();
 	    	results.add(nextPath);
+	    	cnt++;
 	    }
+	   
 	    for (String nextFolder : results) {
-			System.out.println(nextFolder);
+			getResponse().printOut(nextFolder);
 		}
+	    if (cnt >= MAX_ROWS) {
+	    	getResponse().printOut(String.format("Maximum number of rows of %d reached", MAX_ROWS));
+	    }
 		return true;
 	}
 	
