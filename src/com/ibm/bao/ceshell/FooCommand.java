@@ -1,98 +1,33 @@
 package com.ibm.bao.ceshell;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
+import com.filenet.api.admin.EventQueueItem;
+import com.filenet.api.collection.IndependentObjectSet;
+import com.filenet.api.constants.PropertyNames;
+import com.filenet.api.constants.RefreshMode;
+import com.filenet.api.core.CustomObject;
+import com.filenet.api.core.Document;
+import com.filenet.api.core.Factory;
+import com.filenet.api.core.IndependentObject;
+import com.filenet.api.core.ObjectStore;
+import com.filenet.api.core.RetrievingBatch;
+import com.filenet.api.core.VersionSeries;
+import com.filenet.api.property.PropertyFilter;
+import com.filenet.api.query.SearchSQL;
+import com.filenet.api.query.SearchScope;
+import com.filenet.api.util.Id;
+import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
+import com.ibm.bao.ceshell.cmdline.VersionCmdLineHandler;
 
 import jcmdline.CmdLineHandler;
 import jcmdline.Parameter;
 import jcmdline.StringParam;
 
-import com.FileNetFacade;
-import com.UpdateDTO;
-import com.filenet.api.admin.AddOnInstallationRecord;
-import com.filenet.api.admin.ClassDefinition;
-import com.filenet.api.admin.EventQueueItem;
-import com.filenet.api.admin.PropertyDefinition;
-import com.filenet.api.admin.PropertyDefinitionObject;
-import com.filenet.api.admin.PropertyDefinitionString;
-import com.filenet.api.admin.PropertyTemplate;
-import com.filenet.api.admin.PropertyTemplateString;
-import com.filenet.api.admin.StoragePolicy;
-import com.filenet.api.admin.TraceLoggingConfiguration;
-import com.filenet.api.collection.IdList;
-import com.filenet.api.collection.IndependentObjectSet;
-import com.filenet.api.collection.PageIterator;
-import com.filenet.api.collection.PropertyDefinitionList;
-import com.filenet.api.collection.PropertyDescriptionList;
-import com.filenet.api.collection.RepositoryRowSet;
-import com.filenet.api.collection.SubsystemConfigurationList;
-import com.filenet.api.constants.Cardinality;
-import com.filenet.api.constants.CheckinType;
-import com.filenet.api.constants.FilteredPropertyType;
-import com.filenet.api.constants.PropertyNames;
-import com.filenet.api.constants.RefreshMode;
-import com.filenet.api.constants.TypeID;
-import com.filenet.api.core.Connection;
-import com.filenet.api.core.CustomObject;
-import com.filenet.api.core.Document;
-import com.filenet.api.core.Domain;
-import com.filenet.api.core.EngineObject;
-import com.filenet.api.core.Factory;
-import com.filenet.api.core.Folder;
-import com.filenet.api.core.IndependentObject;
-import com.filenet.api.core.ObjectReference;
-import com.filenet.api.core.ObjectStore;
-import com.filenet.api.core.RetrievingBatch;
-import com.filenet.api.core.VersionSeries;
-import com.filenet.api.core.Versionable;
-import com.filenet.api.meta.ClassDescription;
-import com.filenet.api.meta.PropertyDescription;
-import com.filenet.api.property.FilterElement;
-import com.filenet.api.property.Properties;
-import com.filenet.api.property.Property;
-import com.filenet.api.property.PropertyFilter;
-import com.filenet.api.query.RepositoryRow;
-import com.filenet.api.query.SearchSQL;
-import com.filenet.api.query.SearchScope;
-import com.filenet.api.security.User;
-import com.filenet.api.util.Id;
-import com.filenet.api.util.UserContext;
-import com.filenet.apiimpl.wsi.serialization.TokenWriter;
-import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
-import com.ibm.bao.ceshell.cmdline.VersionCmdLineHandler;
-import com.ibm.bao.ceshell.util.PropertyUtil;
-import com.ibm.bao.ceshell.util.QueryHelper;
-import com.ibm.bao.ceshell.util.StringUtil;
-
-import filenet.vw.api.VWSession;
-
 public class FooCommand extends BaseCommand {
 	
 	
-	private static final Integer 
-			D_NO_INHERITANCE = 0,
-			D_CHILDREN = 1,
-			D_ALL_CHILDREN = -1;
-	
-	private static final String
-			NO_INHERITANCE = "NO_INHERITANCE",
-			CHILDREN = "CHILDREN",
-			ALL_CHILDREN = "ALL_CHILDREN";
-			
 	
 	private static final String 
 		CMD = "foo", 
@@ -178,100 +113,100 @@ public class FooCommand extends BaseCommand {
 		}
 	}
 
-	/**
-	 * 
-	 */
-	private void testFilenetFacade() {
-		FileNetFacade facade = new FileNetFacade();
-		String docIdStr = "{D57FC2BF-2075-4103-BCA9-D32DF17F99FD}";
-		String ver2 = "this is test 1",
-			 ver3 = "this is test 2";
-		
-		Document doc = null;
-		
-		ObjectStore os = getObjectStore();
-		boolean result = false;
-		try {
-			
-			{
-				log("start test:  checkout/cancelcheckout");
-				facade.checkout(os, docIdStr);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, true, 1, 0);
-				
-				facade.cancelCheckout(os, docIdStr);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, false, 1, 0);
-				log("checkout/cancelcheckout: " + result);
-			}
-			
-			{
-				log("start test:  checkout/checkin (no change)");
-				facade.checkout(os, docIdStr);
-				facade.checkin(os, docIdStr, CheckinType.MAJOR_VERSION);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, false, 2, 0);
-				log("checkout/checkin (no change): " + result);
-			}
-			
-			{
-				log("start test:  checkout/checkin with update (new version 3)");
-				UpdateDTO updateInfo = new UpdateDTO(ver2, "ver2.txt");
-				
-				facade.checkInNewVersion(os, docIdStr, updateInfo);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, false, 3, 0);
-				log("checkout/checkin with update " + result);
-			}
-			
-			{
-				log("start test:  checkout, updateReservation, cancel");
-				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
-				
-				//* checkout
-				facade.checkout(os, docIdStr);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, true, 3, 0);
-				
-				//* update
-				facade.updateReservation(os, docIdStr, updateInfo);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, true, 3, 0);
-				
-				// cancel checkout
-				facade.cancelCheckout(os, docIdStr);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, false, 3, 0);
-			}
-			
-			{
-				log("start test:  checkout, updateReservation, checkin");
-				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
-				
-				//* checkout
-				facade.checkout(os, docIdStr);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, true, 3, 0);
-				
-				//* update
-				facade.updateReservation(os, docIdStr, updateInfo);
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, true, 3, 0);
-				
-				// checkin
-				facade.checkin(os, docIdStr, updateInfo.getCheckinType());
-				doc = facade.fetchDocument(os, docIdStr);
-				result = assertDocStatus(doc, false, 4, 0);
-				
-			}
-				
-			
-		} catch (Exception e) {
-			System.err.print(e.getMessage());
-		}
-			
-		
-	}
+//	/**
+//	 * 
+//	 */
+//	private void testFilenetFacade() {
+//		FileNetFacade facade = new FileNetFacade();
+//		String docIdStr = "{D57FC2BF-2075-4103-BCA9-D32DF17F99FD}";
+//		String ver2 = "this is test 1",
+//			 ver3 = "this is test 2";
+//		
+//		Document doc = null;
+//		
+//		ObjectStore os = getObjectStore();
+//		boolean result = false;
+//		try {
+//			
+//			{
+//				log("start test:  checkout/cancelcheckout");
+//				facade.checkout(os, docIdStr);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, true, 1, 0);
+//				
+//				facade.cancelCheckout(os, docIdStr);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, false, 1, 0);
+//				log("checkout/cancelcheckout: " + result);
+//			}
+//			
+//			{
+//				log("start test:  checkout/checkin (no change)");
+//				facade.checkout(os, docIdStr);
+//				facade.checkin(os, docIdStr, CheckinType.MAJOR_VERSION);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, false, 2, 0);
+//				log("checkout/checkin (no change): " + result);
+//			}
+//			
+//			{
+//				log("start test:  checkout/checkin with update (new version 3)");
+//				UpdateDTO updateInfo = new UpdateDTO(ver2, "ver2.txt");
+//				
+//				facade.checkInNewVersion(os, docIdStr, updateInfo);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, false, 3, 0);
+//				log("checkout/checkin with update " + result);
+//			}
+//			
+//			{
+//				log("start test:  checkout, updateReservation, cancel");
+//				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
+//				
+//				//* checkout
+//				facade.checkout(os, docIdStr);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, true, 3, 0);
+//				
+//				//* update
+//				facade.updateReservation(os, docIdStr, updateInfo);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, true, 3, 0);
+//				
+//				// cancel checkout
+//				facade.cancelCheckout(os, docIdStr);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, false, 3, 0);
+//			}
+//			
+//			{
+//				log("start test:  checkout, updateReservation, checkin");
+//				UpdateDTO updateInfo = new UpdateDTO(ver3, "ver3.txt");
+//				
+//				//* checkout
+//				facade.checkout(os, docIdStr);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, true, 3, 0);
+//				
+//				//* update
+//				facade.updateReservation(os, docIdStr, updateInfo);
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, true, 3, 0);
+//				
+//				// checkin
+//				facade.checkin(os, docIdStr, updateInfo.getCheckinType());
+//				doc = facade.fetchDocument(os, docIdStr);
+//				result = assertDocStatus(doc, false, 4, 0);
+//				
+//			}
+//				
+//			
+//		} catch (Exception e) {
+//			System.err.print(e.getMessage());
+//		}
+//			
+//		
+//	}
 	
 	boolean assertDocStatus(Document doc, 
 			boolean expectedLockStatus, 
