@@ -87,8 +87,6 @@ public class SolutionLockCmd extends BaseCommand {
 		com.filenet.api.property.Properties props = row.getProperties();
 		
 		displayLock(solutionName, props);
-		// getResponse().printOut(rowStr);
-
 		return true;
 	}
 
@@ -101,10 +99,10 @@ public class SolutionLockCmd extends BaseCommand {
 			ColDef[] defs = new ColDef[] { 
 					new ColDef("#", 4, StringUtil.ALIGN_RIGHT),
 					new ColDef("T", 2, StringUtil.ALIGN_RIGHT),  // type
-					new ColDef("time", 27, StringUtil.ALIGN_LEFT),
-					new ColDef("locked By", 15, StringUtil.ALIGN_LEFT),
-					new ColDef("Case Type", 35, StringUtil.ALIGN_LEFT),
 					new ColDef("Resource", 35, StringUtil.ALIGN_LEFT),
+					new ColDef("Case Type", 35, StringUtil.ALIGN_LEFT),
+					new ColDef("locked By", 15, StringUtil.ALIGN_LEFT),
+					new ColDef("time", 27, StringUtil.ALIGN_LEFT),
 					new ColDef("Display Name", 30, StringUtil.ALIGN_LEFT)
 			};
 			
@@ -114,10 +112,10 @@ public class SolutionLockCmd extends BaseCommand {
 				String[] data = {
 					"" + pos,
 					"" + lock.getType(),
-					lock.getTimeStamp(),
-					lock.getLockedBy(),
-					lock.getCaseType(),
 					lock.getResource(),
+					lock.getCaseType(),
+					lock.getLockedBy(),
+					lock.getLocalTimestamp(),
 					lock.getDisplayName()
 				};
 				String row = StringUtil.formatRow(defs, data, " ");

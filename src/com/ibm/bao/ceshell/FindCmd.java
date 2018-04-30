@@ -30,23 +30,25 @@ public class FindCmd extends BaseCommand {
 	public static final String 
 		CMD = "find", 
 		CMD_DESC = "Find objects by type",
-		HELP_TEXT = "find -type UCM_MPIP";
+		HELP_TEXT = CMD_DESC + "\n\nExample:\n\tfind -type Document -max 10\n\n\tfind -type MyType -last";
 	
 	public static final String
 		DIRECTORY_ARG = "directory",	
 		TYPE_OPT = "type",
 		LAST_OPT = "last",
-		MAX_OPT = "max";
+		MAX_OPT = "max",
+		WHERE_OPT = "where";
 	
 	public static final Integer 
 		DEFAULT_MAX = 100,
-		DEFAULT_LAST = 10;
+		DEFAULT_LAST = 1;
 
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
 		StringParam typeOpt = (StringParam) cl.getOption(FindCmd.TYPE_OPT);
 		IntParam maxOpt = (IntParam) cl.getOption(FindCmd.MAX_OPT);
 		BooleanParam lastOpt = (BooleanParam) cl.getOption(FindCmd.LAST_OPT);
+		StringParam whereOpt = (StringParam) cl.getOption(FindCmd.WHERE_OPT);
 		StringParam pathUriArg = (StringParam) cl.getArg(FindCmd.DIRECTORY_ARG);
 		
 		String typeSearch = "";
@@ -69,7 +71,12 @@ public class FindCmd extends BaseCommand {
 			pathUri = pathUriArg.getValue();
 		}
 		
-		find(pathUri, typeSearch, last, max);
+		String where = null;
+		if (whereOpt.isSet()) {
+			where = whereOpt.getValue();
+		}
+		
+		find(pathUri, typeSearch, last, max, where);
 		return true;
 	}
 	
@@ -77,28 +84,19 @@ public class FindCmd extends BaseCommand {
 			String pathUri, 
 			String typeSearch, 
 			boolean last,
-			int max) throws Exception {
+			int max,
+			String where) throws Exception {
 		
-		FindOpts findOpts = new FindOpts(pathUri, max, last, typeSearch);
+		FindOpts findOpts = new FindOpts(pathUri, max, last, typeSearch, where);
 		dofind(findOpts);
 		return true;
-	}
-
-	private void dofind(FindOpts findOpts) throws Exception {
-		if (findOpts.pathArg != null) {
-			doFindPath();
-		} else if(findOpts.typeOpt != null) {
-			doFindType(findOpts);
-		} else {
-			throw new IllegalArgumentException("Either a path or a type must be specified");
-		}
 	}
 	
 	/**
 	 * Find items by Type
 	 * @param findOpts
 	 */
-	void doFindType(FindOpts findOpts) throws Exception {
+	void dofind(FindOpts findOpts) throws Exception {
 		// SELECT top 1000 f.ObjectType, f.Id, f.FolderName, f.ContainerType, f.ClassDescription, f.DateCreated FROM Folder f  ORDER BY DateCreated asc";
 		// Select top 100 f.ObjectType, f.id, f.Name, f.DateCreated FROM Document d oder by DateCreated asc"
 		
@@ -113,16 +111,14 @@ public class FindCmd extends BaseCommand {
 			maxRecords = FindCmd.DEFAULT_LAST;
 		}
 		
-		if (isFolderType(findOpts.typeOpt)) {
-			String folderFmt = "TODO";
-			query = String.format(folderFmt, maxRecords, findOpts.typeOpt, order);
-		} else {
-			String findTypeFmt = "select top %d  d.id, "
-					+ "d.Name, d.DateCreated, d.Creator, d.ClassDescription FROM %s d order by DateCreated %s";
-			query = String.format(findTypeFmt, new Object[] {maxRecords, classType, order} );
+		
+		String whereConstraint = "";
+		whereConstraint = constructWhereConstraint(findOpts);
+		String findTypeFmt = "select top %d  d.id, d.Name, d.DateCreated, d.Creator, d.ClassDescription FROM %s d  %s order by DateCreated %s";
+		query = String.format(findTypeFmt, maxRecords, classType, whereConstraint, order );
 			
-		}
-		getResponse().printOut(query);
+
+		getResponse().printOut("DEBUG: " + query);
 		RepositoryRowSet rowSet = runQuery(query);
 		
 		ColDef[] defs = new ColDef[] { 
@@ -180,6 +176,27 @@ public class FindCmd extends BaseCommand {
 		
 	}
 
+	private String constructWhereConstraint(FindOpts findOpts) {
+		String andOperator = "";
+		
+		/** both null, return empty string **/
+		if (findOpts.whereOpt == null && findOpts.pathArg == null) {
+			return "";
+		}
+		if (findOpts.whereOpt != null && findOpts.pathArg != null) {
+			// use AND to join together
+			andOperator = " and ";
+		}
+		String whereConstraint = (findOpts.whereOpt == null) ? "" : findOpts.whereOpt;
+		String pathConstraint = "";
+		if (findOpts.pathArg != null) {
+			String fullPath = this.pathUriToFullPath(findOpts.pathArg);
+			pathConstraint = String.format("d.this InSubFolder('%s')", fullPath);
+		}
+		String fullWhereConstraint = String.format("where %s %s %s", whereConstraint, andOperator, pathConstraint);
+		return fullWhereConstraint;
+	}
+
 	private String readDateProperty(Properties props, String datePropName, DateFieldFormatter dateFormatter) {
 		Property prop = props.get(datePropName);
 		Object value = prop.getObjectValue();
@@ -212,10 +229,7 @@ public class FindCmd extends BaseCommand {
 		return false;
 	}
 
-	private void doFindPath() {
-		// TODO Auto-generated method stub
-		
-	}
+	
 
 	@Override
 	protected CmdLineHandler getCommandLine() {
@@ -223,6 +237,7 @@ public class FindCmd extends BaseCommand {
 		StringParam typeOpt = null;
 		IntParam maxOpt = null;
 		BooleanParam lastOpt = null;
+		StringParam whereOpt= null;
 		StringParam pathUriArg = null;;
 		
 		// options
@@ -236,13 +251,17 @@ public class FindCmd extends BaseCommand {
 		lastOpt = new BooleanParam(FindCmd.LAST_OPT, "find last items by dateCreated");
 		lastOpt.setOptional(BooleanParam.OPTIONAL);
 		
+		whereOpt = new StringParam(FindCmd.WHERE_OPT, "where condition to add to the search");
+		whereOpt.setOptional(StringParam.OPTIONAL);
+		whereOpt.setMultiValued(StringParam.SINGLE_VALUED);
+		
 		// cmd args
 		pathUriArg = getPathUriArg();
 
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] {typeOpt, maxOpt,  lastOpt }, 
+					new Parameter[] {typeOpt, maxOpt,  lastOpt, whereOpt}, 
 					new Parameter[] { pathUriArg });
 		cl.setDieOnParseError(false);
 
@@ -278,12 +297,14 @@ class FindOpts {
 	public int max;
 	public boolean last;
 	public String typeOpt;
+	public String whereOpt;
 	
-	public FindOpts(String pathArg, int max, boolean last, String typeOpt) {
+	public FindOpts(String pathArg, int max, boolean last, String typeOpt, String whereOpt) {
 		this.pathArg = pathArg;
 		this.max = max;
 		this.last = last;
 		this.typeOpt = typeOpt;
+		this.whereOpt = whereOpt;
 	}
 	
 }
