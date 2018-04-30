@@ -92,8 +92,7 @@ public class ACLListCmd extends AbsAclCmd {
 		} 
 		return false;
 	}
-	
-	
+
 
 	@SuppressWarnings("unchecked")
 	private void listPermissions(AccessPermissionList apl, 
@@ -135,6 +134,8 @@ public class ACLListCmd extends AbsAclCmd {
 				idDesc = "This object only";
 			} else if (id == -1) {
 				idDesc = "This object and all children";
+			} else if (id == -2) {
+				idDesc = "All children but not this object";
 			} else {
 				idDesc = "This object and immediate children only";
 			}

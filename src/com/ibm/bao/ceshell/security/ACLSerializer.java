@@ -98,15 +98,15 @@ public class ACLSerializer {
 	 */
 	private String appendHeader(String comment)	throws Exception {
 		StringBuffer header = new StringBuffer();
-		header.append(";********************************************************************\n");
+		header.append(";***********************************************************************************************\n");
 		header.append(";" + comment);
 		header.append("\n;");
 		header.append("\n;\tsource: inter (0=DIRECT 1=DEFAULT 2=TEMPLATE 3=PARENT 255=SOURCE_PROXY) ");
 		header.append("\n;\tAccessType:  1=allow 2=deny");
 		header.append("\n;\tmask:  integer");
-		header.append("\n;\tdepth: integer (-1=ALL_CHILDREN  0= NO_INHERITANCE 1=CHILDREN)");
+		header.append("\n;\tdepth: integer (-2=ALL_CHILDREN_BUT_NOT_THIS -1=ALL_CHILDREN  0=NO_INHERITANCE 1=CHILDREN)");
 		header.append("\n;\tgrantee: String");
-		header.append("\n;********************************************************************\n");
+		header.append("\n;**********************************************************************************************\n");
 
 		return header.toString();
 	}
