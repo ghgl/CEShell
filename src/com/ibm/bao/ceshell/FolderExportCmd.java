@@ -13,17 +13,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import jcmdline.CmdLineHandler;
-import jcmdline.FileParam;
-import jcmdline.Parameter;
-import jcmdline.StringParam;
-
 import com.filenet.api.collection.ContentElementList;
 import com.filenet.api.core.ContentElement;
 import com.filenet.api.core.ContentTransfer;
 import com.filenet.api.core.Document;
 import com.filenet.api.core.Folder;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
+
+import jcmdline.BooleanParam;
+import jcmdline.CmdLineHandler;
+import jcmdline.FileParam;
+import jcmdline.Parameter;
+import jcmdline.StringParam;
 
 
 
@@ -37,17 +38,18 @@ import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 public class FolderExportCmd extends BaseCommand {
 	
 	private static final String 
-	CMD = "folderexport", 
-	CMD_DESC = "export a folder recursively to a local folder",
-	HELP_TEXT = CMD_DESC +
-		"\nUsage:" +
-		"\n\tfolderexport -outdir <out-dir> " +
-		"\nfolderexport -outdir e:/temp " +
-		"\n\texport foo.txt to e:/temp/mydoc.txt. If e:/temp/mydoc.txt " +
-		"\n\texists, then it is overwritten";
-	
+		CMD = "folderexport", 
+		CMD_DESC = "export a folder to a local folder. If the recusion flag is set, then recurisvely export",
+		HELP_TEXT = CMD_DESC +
+			"\nUsage:" +
+			"\n\tfolderexport -outdir <out-dir> <fn-folder-uri>" +
+			"\nfolderexport -outdir e:/temp  my-folder" +
+			"\n\texport foo.txt to e:/temp/mydoc.txt. If e:/temp/mydoc.txt " +
+			"\n\texists, then it is overwritten";
+		
 	public static final String
 		OUTPUT_DIR_OPT = "outdir",
+		RECURSION_OPT = "recursive",
 		FILENET_FOLDER_URIS_ARG = "folder-uris";
 		
 
@@ -57,14 +59,19 @@ public class FolderExportCmd extends BaseCommand {
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
 		FileParam outputDirOpt = (FileParam) cl.getOption(OUTPUT_DIR_OPT);
+		BooleanParam recursionOpt = (BooleanParam) cl.getOption(RECURSION_OPT);
 		StringParam fileNetFolderUrisArg = (StringParam) cl.getArg(FILENET_FOLDER_URIS_ARG);
 		
 		File outputDir = outputDirOpt.getValue();
+		Boolean recursion = Boolean.FALSE;
+		if (recursionOpt.isSet()) {
+			recursion = recursionOpt.getValue();
+		}
 		List<String> fileNetFolderUris = fileNetFolderUrisArg.getValues();
 		
 		FolderExportRequestVO requestVO = createExportVO(outputDir, fileNetFolderUris);
 		
-		return exportFolders(requestVO);
+		return exportFolders(requestVO, recursion);
 		
 	}
 	
@@ -75,7 +82,7 @@ public class FolderExportCmd extends BaseCommand {
 	 * @param outputDir
 	 * @param fileNetFolderUris
 	 */
-	public boolean exportFolders(FolderExportRequestVO requestVO) {
+	public boolean exportFolders(FolderExportRequestVO requestVO, boolean recursive) {
 		List<Folder> srcFolders = new ArrayList<Folder>();
 		List<String> fileNetFolderUris = requestVO.getFileNetFolderUris();
 		
@@ -88,7 +95,7 @@ public class FolderExportCmd extends BaseCommand {
 		
 		
 		
-		doExportFolders(requestVO, srcFolders);
+		doExportFolders(requestVO, srcFolders, recursive);
 		return true;
 	}
 
@@ -105,12 +112,12 @@ public class FolderExportCmd extends BaseCommand {
 	 * @param outputDir
 	 * @param srcFolders
 	 */
-	private void doExportFolders(FolderExportRequestVO requestVO, List<Folder> srcFolders) {
+	private void doExportFolders(FolderExportRequestVO requestVO, List<Folder> srcFolders, boolean recursive) {
 		int depth = 0;
 		File outputDir = requestVO.getOutputDir();
 		
 		for (Folder srcFolder : srcFolders) {
-			doExportFolder(depth, outputDir, srcFolder);
+			doExportFolder(depth, outputDir, srcFolder, recursive);
 		}
 		
 	}
@@ -119,16 +126,18 @@ public class FolderExportCmd extends BaseCommand {
 	 * @param outputDir
 	 * @param srcFolder
 	 */
-	private void doExportFolder(int curentDepth, File outputDir, Folder srcFolder) {
+	private void doExportFolder(int curentDepth, File outputDir, Folder srcFolder, boolean recursive) {
 		String folderName = srcFolder.get_FolderName();
 		File localOutDir = new File(outputDir, folderName);
 		localOutDir.mkdir();
-		Iterator<?> iter = srcFolder.get_SubFolders().iterator();
-		while (iter.hasNext()) {
-			Folder childFolder = (Folder) iter.next();
-			doExportFolder(curentDepth + 1, localOutDir, childFolder);
-		}
 		
+		if (recursive == true) {
+			Iterator<?> iter = srcFolder.get_SubFolders().iterator();
+			while (iter.hasNext()) {
+				Folder childFolder = (Folder) iter.next();
+				doExportFolder(curentDepth + 1, localOutDir, childFolder, recursive);
+			}
+		}
 		
 		// export all docs in current director
 		
@@ -197,7 +206,9 @@ public class FolderExportCmd extends BaseCommand {
 		// create command line handler
 		CmdLineHandler cl = null;
 		FileParam outputDirOpt = null;
+		BooleanParam recursionOpt = null;
 		StringParam filenetFolderUrisArg = null;
+
 
 		// params
 		outputDirOpt = new FileParam(OUTPUT_DIR_OPT,
@@ -206,7 +217,8 @@ public class FolderExportCmd extends BaseCommand {
 				FileParam.REQUIRED);
 		outputDirOpt.setOptionLabel("<output dir>");
 		
-		
+		recursionOpt = new BooleanParam(RECURSION_OPT, "recurively export folder");
+		recursionOpt.setOptional(BooleanParam.OPTIONAL);
 
 	
 		// cmd args
@@ -218,7 +230,7 @@ public class FolderExportCmd extends BaseCommand {
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] { outputDirOpt,  }, 
+					new Parameter[] { outputDirOpt, recursionOpt }, 
 					new Parameter[] { filenetFolderUrisArg });
 		cl.setDieOnParseError(false);
 		
