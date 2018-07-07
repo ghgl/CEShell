@@ -146,10 +146,10 @@ public class StepElementEditUtil {
 		VWParameter[] params = null;
 		java.util.Properties props = stepElementToProps();
 		ColDef[] defs = new ColDef[] {
-				new ColDef("Name", 20, StringUtil.ALIGN_LEFT),
-				new ColDef("Type", 10, StringUtil.ALIGN_LEFT),
-				new ColDef("Mode", 10, StringUtil.ALIGN_LEFT),
-				new ColDef("Value", 40, StringUtil.ALIGN_LEFT)
+				new ColDef("Name", 50, StringUtil.ALIGN_LEFT),
+				new ColDef("Type", 12, StringUtil.ALIGN_LEFT),
+				new ColDef("Mode", 12, StringUtil.ALIGN_LEFT),
+				new ColDef("Value", 60, StringUtil.ALIGN_LEFT)
 			};
 		this.ceShell.getResponse().printOut("Properties for:");
 		this.ceShell.getResponse().printOut("\twob " + sourceName);

@@ -40,6 +40,7 @@ public class LdapUserCmd extends BaseCommand {
 	// param names
 	private static final String 
 		EMAIL_ONLY_OPT = "email-only",
+		SHORT_LIST_NO_GROUPS = "short",
 		USER_ARG = "user";
 
 
@@ -48,22 +49,40 @@ public class LdapUserCmd extends BaseCommand {
 	 */
 	@Override
 	protected boolean doRun(CmdLineHandler cl) throws Exception {
-		StringParam userNameParam = (StringParam) cl.getArg(USER_ARG);
 		BooleanParam emailOpt = (BooleanParam) cl.getOption(EMAIL_ONLY_OPT);
-		String userShortName = null;
-		Boolean emailOnly = Boolean.FALSE;
+		BooleanParam shortOpt = (BooleanParam) cl.getOption(SHORT_LIST_NO_GROUPS);
+		StringParam userNameParam = (StringParam) cl.getArg(USER_ARG);
 		
-		if (userNameParam.isSet()) {
-			userShortName = userNameParam.getValue();
-		}
+		
+		Boolean emailOnly = Boolean.FALSE;
+		Boolean shortOnly = Boolean.FALSE;
+		Boolean listGroups = Boolean.TRUE;
+		String userShortName = null;
+		
 		if (emailOpt.isSet()) {
 			emailOnly = emailOpt.getValue();
 		}
 		
-		return ldapUsr(userShortName, emailOnly);
+		if (shortOpt.isSet()) {
+			shortOnly = shortOpt.getValue();
+			if (shortOnly == Boolean.TRUE) {
+				listGroups = Boolean.FALSE;
+			}
+		}
+		
+		if (userNameParam.isSet()) {
+			userShortName = userNameParam.getValue();
+		}
+		
+		
+		return ldapUsr(userShortName, emailOnly, shortOnly, listGroups);
 	}
 
-	public boolean ldapUsr(String userShortName, boolean emailOnly) throws Exception {
+	public boolean ldapUsr(
+			String userShortName, 
+			boolean emailOnly,
+			boolean shortOnly,
+			boolean listGroups) throws Exception {
 		User user = null;
 		
 		try {
@@ -90,12 +109,13 @@ public class LdapUserCmd extends BaseCommand {
 			getResponse().printErr(msg);
 			return false;
 		}
-		listUserProps(user, true, true, emailOnly);
+		listUserProps(user, shortOnly, listGroups, emailOnly);
 		return true;
 	}
 	
-	private void listUserProps(User user, 
-			boolean listUserProps, 
+	private void listUserProps(
+			User user, 
+			boolean listShortOnly, 
 			boolean listGroups, 
 			boolean emailOnly) {
 		if (emailOnly) {
@@ -110,7 +130,7 @@ public class LdapUserCmd extends BaseCommand {
 			getResponse().printOut(StringUtil.padLeft(label, ".", 25) + email);
 			return;
 		}
-		if (listUserProps) {
+		if (listShortOnly) {
 			String userId = user.get_Id();
 			String userDisplayName = user.get_DisplayName();
 			String userDn = user.get_DistinguishedName();
@@ -136,8 +156,7 @@ public class LdapUserCmd extends BaseCommand {
 				}
 				getResponse().printOut(StringUtil.padLeft(name, ".", 25) + strValue);
 			}
-		}
-		if (listGroups) {
+		} else if (listGroups) {
 			@SuppressWarnings("unused")
 			GroupSet groups = user.get_MemberOfGroups();
 			getResponse().printOut("member of Groups:\n---------------------------------------------------");
@@ -186,11 +205,15 @@ public class LdapUserCmd extends BaseCommand {
 		// create command line handler
 		CmdLineHandler cl = null;
 		BooleanParam emailOpt = null;
+		BooleanParam shortOpt = null;
 		StringParam userArg = null;
 		
 		// options
 		emailOpt = new BooleanParam(EMAIL_ONLY_OPT,"display just the email address");
 		emailOpt.setOptional(BooleanParam.OPTIONAL);
+		
+		shortOpt = new BooleanParam(SHORT_LIST_NO_GROUPS, "display user properties but no groups");
+		shortOpt.setOptional(BooleanParam.OPTIONAL);
 		
 		// cmd args
 		userArg = new StringParam(USER_ARG, 
@@ -201,7 +224,7 @@ public class LdapUserCmd extends BaseCommand {
 		// create command line handler
 		cl = new HelpCmdLineHandler(
 						HELP_TEXT, CMD, CMD_DESC, 
-					new Parameter[] {emailOpt }, 
+					new Parameter[] {emailOpt, shortOpt }, 
 					new Parameter[] { userArg });
 		cl.setDieOnParseError(false);
 
