@@ -21,7 +21,7 @@ import com.ibm.bao.ceshell.util.StringUtil;
 
 public class ACLListCmd extends AbsAclCmd {
 	
-	int MAX_GRANTEE_LEN = 90;
+	public static final int MAX_GRANTEE_LEN = 90;
 	
 	
 	public static final String 
@@ -95,7 +95,7 @@ public class ACLListCmd extends AbsAclCmd {
 
 
 	@SuppressWarnings("unchecked")
-	private void listPermissions(AccessPermissionList apl, 
+	protected void listPermissions(AccessPermissionList apl, 
 			String objectType, 
 			String pathUri) {
 		Map<Integer, Level> namedLevels = ObjectLevels.getObjectLevelsByObjectType(objectType);
@@ -161,7 +161,7 @@ public class ACLListCmd extends AbsAclCmd {
 	 * @param string3
 	 * @param string4
 	 */
-	private void formatRowHeader(int[] cols, String col0, String col1, String col2,String col3, String col4, String col5, String col6) {
+	protected void formatRowHeader(int[] cols, String col0, String col1, String col2,String col3, String col4, String col5, String col6) {
 		StringBuffer buf = new StringBuffer();
 		int headerLen = 0;
 		for(int i = 0; i < cols.length; i++) {
@@ -184,7 +184,7 @@ public class ACLListCmd extends AbsAclCmd {
 	 * @param mask
 	 * @param idDesc
 	 */
-	private String formatRow(int[] cols, 
+	protected String formatRow(int[] cols, 
 			String access_type,
 			String grantee, 
 			String granteeType,

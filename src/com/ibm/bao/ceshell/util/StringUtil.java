@@ -213,8 +213,12 @@ public class StringUtil {
 		StringBuffer buf = new StringBuffer();
 		for (int i = 0; i < cols.length; i++) {
 			String nextValue = StringUtil.nullCheck(rowData[i]);
-			buf.append(StringUtil.pad(nextValue, padChar, cols[i].getAlign(), cols[i].getLength()));
-			buf.append(" ");
+			if (i < cols.length - 1) {
+				buf.append(StringUtil.pad(nextValue, padChar, cols[i].getAlign(), cols[i].getLength()));
+				buf.append(" ");
+			} else {
+				buf.append(nextValue);
+			}
 		}
 		
 		return buf.toString();

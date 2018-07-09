@@ -14,6 +14,7 @@ import com.filenet.api.admin.PropertyTemplate;
 import com.filenet.api.collection.AccessPermissionList;
 import com.filenet.api.constants.AccessType;
 import com.filenet.api.constants.PermissionSource;
+import com.filenet.api.constants.PropertyNames;
 import com.filenet.api.constants.RefreshMode;
 import com.filenet.api.core.Connection;
 import com.filenet.api.core.Document;
@@ -234,6 +235,7 @@ public abstract class AbsAclCmd extends BaseCommand {
 
 	protected PropertyFilter createStdPermissionFilter() {
 		PropertyFilter permissionFilter = new PropertyFilter();
+		
 		permissionFilter.setMaxRecursion(2);
 		permissionFilter.addIncludeProperty(
 				new FilterElement(null, null, null, "Permissions AccessMask AccessType GranteeName GranteeType InheritableDepth PermissionSource", null));
