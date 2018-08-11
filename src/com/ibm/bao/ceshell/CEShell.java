@@ -26,7 +26,6 @@ import com.ibm.bao.ceshell.connection.ConnectionStorageInfo;
 import com.ibm.bao.ceshell.impl.EditInfo;
 import com.ibm.bao.ceshell.pe.PEConnectionSvc;
 import com.ibm.bao.ceshell.util.PropertyUtil;
-import com.ibm.bao.ceshell.util.StringUtil;
 
 import filenet.vw.api.VWSession;
 public class CEShell {
@@ -281,6 +280,10 @@ public class CEShell {
 			}
 		}
 		return (found == true);
+	}
+	
+	public CEConnectInfo getCEConnectInfo() {
+		return this.connectInfo;
 	}
 	
 	public String getConnectionDescription() {

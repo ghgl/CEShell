@@ -56,7 +56,7 @@ public class LdapUserCmd extends BaseCommand {
 		
 		Boolean emailOnly = Boolean.FALSE;
 		Boolean shortOnly = Boolean.FALSE;
-		Boolean listGroups = Boolean.TRUE;
+		Boolean listGroups = Boolean.FALSE;
 		String userShortName = null;
 		
 		if (emailOpt.isSet()) {
@@ -118,64 +118,63 @@ public class LdapUserCmd extends BaseCommand {
 			boolean listShortOnly, 
 			boolean listGroups, 
 			boolean emailOnly) {
+		String userId = user.get_Id();
+		String userDisplayName = user.get_DisplayName();
+		String userDn = user.get_DistinguishedName();
+		String userShortName = user.get_ShortName();
+		String email = user.get_Email();
+		if (email == null) {
+			email = "null";
+		}
 		if (emailOnly) {
-			String email = null;
-			if (user.get_Email() == null) {
-				email = "null";
-			} else {
-				email = user.get_Email();
-			}
 			String name = user.get_DisplayName();
 			String label = name + " email is: ";
 			getResponse().printOut(StringUtil.padLeft(label, ".", 25) + email);
 			return;
 		}
-		if (listShortOnly) {
-			String userId = user.get_Id();
-			String userDisplayName = user.get_DisplayName();
-			String userDn = user.get_DistinguishedName();
-			String userShortName = user.get_ShortName();
-			String email = user.get_Email();
-			String[][] props = new String[][] {
-					{"Id", userId},
-					{"DisplayName", userDisplayName},
-					{"Dn", userDn},
-					{"ShortName", userShortName},
-					{"Email", email}
-			};
-			
-			for(int i = 0; i < props.length; i++) {
-				
-				String name = props[i][0];
-				String strValue = null;
-				Object value = props[i][1];
-				if (value != null) {
-					strValue = value.toString();
-				} else {
-					strValue = "<null>";
-				}
-				getResponse().printOut(StringUtil.padLeft(name, ".", 25) + strValue);
-			}
-		} else if (listGroups) {
-			@SuppressWarnings("unused")
-			GroupSet groups = user.get_MemberOfGroups();
-			getResponse().printOut("member of Groups:\n---------------------------------------------------");
-			Property groupProp = user.fetchProperty("MemberOfGroups",
-					createGroupPropertyFilter());
-			IndependentObjectSet groupSet = groupProp
-					.getIndependentObjectSetValue();
-			PageIterator groupIter = groupSet.pageIterator();
-			groupIter.setPageSize(50);
-			listGroups(groupIter);
+		if (listShortOnly == true) {
+			getResponse().printOut(userShortName + "\t" + userDisplayName);
+			return;
 		}
+		
+		String[][] props = new String[][] {
+				{"Id", userId},
+				{"DisplayName", userDisplayName},
+				{"Dn", userDn},
+				{"ShortName", userShortName},
+				{"Email", email}
+		};
+		
+		for(int i = 0; i < props.length; i++) {
+			
+			String name = props[i][0];
+			String strValue = null;
+			Object value = props[i][1];
+			if (value != null) {
+				strValue = value.toString();
+			} else {
+				strValue = "<null>";
+			}
+			getResponse().printOut(StringUtil.padLeft(name, ".", 25) + strValue);
+		}
+		listGroups(user);
 	}
 	
 	/**
 	 * @param groupIter
 	 */
-	private void listGroups(PageIterator pageIter) {
+	private void listGroups(User user) {
 		// Cycle through pages
-	    
+		@SuppressWarnings("unused")
+		GroupSet groups = user.get_MemberOfGroups();
+		getResponse().printOut("member of Groups:\n---------------------------------------------------");
+		Property groupProp = user.fetchProperty("MemberOfGroups",
+				createGroupPropertyFilter());
+		IndependentObjectSet groupSet = groupProp
+				.getIndependentObjectSetValue();
+		PageIterator pageIter = groupSet.pageIterator();
+		pageIter.setPageSize(50);
+		
 	    while (pageIter.nextPage() == true) {
 	        // Get counts
 	        // Get elements on page
