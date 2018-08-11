@@ -36,16 +36,17 @@ public class UCMCaseSecurity extends ACLListCmd {
 				PropertyNames.ACCESS_MASK,
 				PropertyNames.GRANTEE_NAME,
 				PropertyNames.GRANTEE_TYPE,
+				PropertyNames.ID,
 				PropertyNames.INHERITABLE_DEPTH,
 				PropertyNames.PERMISSION_SOURCE,
 				PropertyNames.OWNER,
 				PropertyNames.PATH_NAME,
-				"CmAcmCaseState",
-				"REC_OWNRSHP_ORG",
-				"UCM_REC_STUS",
-				"UCM_REC_SUB_STUS",
-				"UCM_REFRD_UPIC",
-				"UCM_Security_Proxy"
+				UCM.PropertyNames.CmAcmCaseState,
+				UCM.PropertyNames.REC_OWNRSHP_ORG,
+				UCM.PropertyNames.UCM_REC_STUS,
+				UCM.PropertyNames.UCM_REC_SUB_STUS,
+				UCM.PropertyNames.UCM_REFRD_UPIC,
+				UCM.PropertyNames.UCM_Security_Proxy
 				
 		};
 		StringBuffer buf = new StringBuffer();
@@ -69,35 +70,48 @@ public class UCMCaseSecurity extends ACLListCmd {
 	}
 
 	public boolean ucmCaseSecurityList(String pathUri) {
-		Folder folder = fetchCaseFolder(pathUri);
+		Folder folder = null;
+		if (getShell().isId(pathUri)) {
+			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), new Id(pathUri), null);
+		} else if (isCaseId(pathUri)) {
+			
+		} else {
+			String decodedUri = getShell().urlDecode(pathUri);
+			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
+			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), fullPath, null);
+		}
+		
+		
 		if (! isUcmCase(folder)) {
 			String msg = String.format("Folder with uri %s is not a UCM Case", pathUri);
 			getResponse().printErr(msg);
 			return false;
 		}
 		Properties props = folder.getProperties();
+		String id = folder.get_Id().toString();
 		String className = folder.getClassName();
 		String owner = folder.get_Owner();
-		String recOwnershipOrg = readString(props, "REC_OWNRSHP_ORG");
+		String recOwnershipOrg = readString(props, UCM.PropertyNames.REC_OWNRSHP_ORG);
 		String secProxyPath = fetchSecProxy(props);
 		String caseStateStr = readCaseState(props);
-		String ucmRecStus = readString(props, "UCM_REC_STUS");
-		String referredToUpic = readString(props, "UCM_REFRD_UPIC");
-		String ucmRecSubStus = readString(props, "UCM_REC_SUB_STUS");
+		String ucmRecStus = readString(props, UCM.PropertyNames.UCM_REC_STUS);
+		String referredToUpic = readString(props, UCM.PropertyNames.UCM_REFRD_UPIC);
+		String ucmRecSubStus = readString(props, UCM.PropertyNames.UCM_REC_SUB_STUS);
 		ColDef[] colDefs = new ColDef[] {
 				new ColDef("Property", 20, StringUtil.ALIGN_LEFT),
 				new ColDef("Value", 60, StringUtil.ALIGN_LEFT)
 		};
 		String[][] data = new String[][] {
-			{"path", folder.get_PathName()},
+			{PropertyNames.ID, folder.get_Id().toString()},
+			{PropertyNames.PATH_NAME, folder.get_PathName()},
 			{"className", className},
-			{"owner", owner},
-			{"recOwnershipOrg", recOwnershipOrg},
-			{"caseState", caseStateStr},
-			{"UCM_REC_STUS", ucmRecStus},
-			{"UCM_REC_SUB_STUS", ucmRecSubStus},
-			{"UCM_REFRD_UPIC", referredToUpic},
-			{"security Proxy", secProxyPath}
+			{PropertyNames.OWNER, owner},
+			{UCM.PropertyNames.REC_OWNRSHP_ORG, recOwnershipOrg},
+			{UCM.PropertyNames.CmAcmCaseState, caseStateStr},
+			{UCM.PropertyNames.UCM_REC_STUS, ucmRecStus},
+			{UCM.PropertyNames.UCM_REC_SUB_STUS, ucmRecSubStus},
+			{UCM.PropertyNames.UCM_REFRD_UPIC, referredToUpic},
+			{UCM.PropertyNames.UCM_Security_Proxy, secProxyPath}
 			
 		};
 		
@@ -114,9 +128,14 @@ public class UCMCaseSecurity extends ACLListCmd {
 		return true;
 	}
 
+	private boolean isCaseId(String pathUri) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 	private String readCaseState(Properties props) {
 		// 
-		Property prop = props.find("CmAcmCaseState");
+		Property prop = props.find(UCM.PropertyNames.CmAcmCaseState);
 		if (prop == null) {
 			return "";
 		}
