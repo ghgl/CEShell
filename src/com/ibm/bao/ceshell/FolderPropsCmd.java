@@ -22,6 +22,7 @@ import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.cmdline.HelpCmdLineHandler;
 import com.ibm.bao.ceshell.constants.DP;
 import com.ibm.bao.ceshell.constants.FP;
+import com.ibm.bao.ceshell.util.QueryHelper;
 import com.ibm.bao.ceshell.util.StringUtil;
 
 import jcmdline.CmdLineHandler;
@@ -57,23 +58,29 @@ public class FolderPropsCmd extends BaseCommand {
 		return folderProps(folderUri, category);
 	}
 
-	public boolean folderProps(String folderUri, String category) {
+	public boolean folderProps(String folderUri, String category) throws Exception {
 		StringBuffer buf = new StringBuffer();
-		PropertyFilter propFilter = createPropCategoryFilter(category);
 		Folder folder = null;
+		PropertyFilter propFilter = createPropCategoryFilter(category);
+		
 		SortedSet<Property> propsSet = new TreeSet<Property>(new Comparator<Property>() {
 			public int compare(Property o1, Property o2) {
 				return (o1.getPropertyName().compareTo(o2.getPropertyName()));
 			}
 		});
-
-		if (getShell().isId(folderUri)) {
+		
+		if (getShell().getUCM().isCaseId(folderUri)) {
+			folder = fetchCaseFolder(folderUri);
+			
+		} else if (getShell().isId(folderUri)) {
 			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), new Id(folderUri), propFilter);
 		} else {
 			String decodedUri = getShell().urlDecode(folderUri);
 			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
 			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), fullPath, propFilter);
 		}
+		
+		
 		for (Iterator<?> iterator = folder.getProperties().iterator(); iterator.hasNext();) {
 			Property property = (Property) iterator.next();
 			propsSet.add(property);
@@ -86,6 +93,16 @@ public class FolderPropsCmd extends BaseCommand {
 		return true;
 	}
 	
+	private Folder fetchCaseFolder(String ucmRecId) throws Exception {
+		PropertyFilter propFilter = createPropCategoryFilter(FP.CAT_CUSTOM_AND_GENERAL);
+		Folder folder = null;
+		Id id = null;
+		String whereClause = String.format("UCM_REC_ID = '%S'", ucmRecId);
+		id = this.getShell().fetchId("cmAcmCaseFolder", whereClause);
+		folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), id, propFilter);
+		return folder;
+	}
+
 	protected void readPropsV2(StringBuffer buf, Folder folder,
 			SortedSet<Property> propsSet) {
 		String folderClassSymbolicName = folder.get_ClassDescription().get_SymbolicName();
@@ -106,7 +123,7 @@ public class FolderPropsCmd extends BaseCommand {
 			Boolean inout = (Boolean) DP.PropTypes.get(cShortName);
 			if (name.equals(DP.ClassDescription)) {
 				ClassDescription cd = folder.get_ClassDescription();
-				String description = cd.get_DisplayName();
+				String description = cd.get_SymbolicName();
 				cd.get_DisplayName();
 				appendValue(buf, description, DP.ClassDescription);
 				

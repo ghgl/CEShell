@@ -1,6 +1,13 @@
 package com.ibm.ucm.ecm.ceshell;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.ibm.bao.ceshell.CEShell;
+
 public class UCM {
+	
+	private CEShell ceShell = null;
 	
 	public static final class PropertyNames {
 		public static final String
@@ -12,9 +19,30 @@ public class UCM {
 		UCM_Security_Proxy = "UCM_Security_Proxy";
 	}
 	
-	public static boolean isCaseId(String pathUri) {
-		// TODO: implement
-		return false;
+	UCM() {
+		
+	}
+	
+	public UCM(CEShell ceShell) {
+		this();
+		this.ceShell = ceShell;
+	}
+	
+	/** 
+	 * verify the path passed in matches patter CSE-180809-00005
+	 * @param pathUri
+	 * @return
+	 */
+	public boolean isCaseId(String pathUri) {
+		
+		if (pathUri.length() != 16) {
+			return false;
+		}
+		
+		Pattern pattern = Pattern.compile("[A-Z]{3}-[0-9]{6}-[0-9]{5}");
+		Matcher matcher = pattern.matcher(pathUri);
+		
+		return matcher.find();
 	}
 
 }

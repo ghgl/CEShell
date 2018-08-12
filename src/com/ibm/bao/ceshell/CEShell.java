@@ -19,6 +19,7 @@ import com.filenet.api.core.Folder;
 import com.filenet.api.core.ObjectStore;
 import com.filenet.api.property.PropertyFilter;
 import com.filenet.api.security.User;
+import com.filenet.api.util.Id;
 import com.filenet.api.util.UserContext;
 import com.ibm.bao.ceshell.connection.CECryptoManager;
 import com.ibm.bao.ceshell.connection.ConnectionManager;
@@ -26,6 +27,8 @@ import com.ibm.bao.ceshell.connection.ConnectionStorageInfo;
 import com.ibm.bao.ceshell.impl.EditInfo;
 import com.ibm.bao.ceshell.pe.PEConnectionSvc;
 import com.ibm.bao.ceshell.util.PropertyUtil;
+import com.ibm.bao.ceshell.util.QueryHelper;
+import com.ibm.ucm.ecm.ceshell.UCM;
 
 import filenet.vw.api.VWSession;
 public class CEShell {
@@ -46,11 +49,12 @@ public class CEShell {
 	private Env env;
 	private int credentialsDepth = 0;
 	private EditInfo currentEditInfo = null;
+	private UCM ucm = null; 
 	
 	private HashMap<String,String> commandMap = new HashMap<String, String>();
 	
 	public CEShell() {
-		
+		this.ucm = new UCM(this);
 	}
 	
 	/**
@@ -121,6 +125,10 @@ public class CEShell {
 
 	public void setResponse(BaseResponse response) {
 		this.response = response;
+	}
+	
+	public UCM getUCM() {
+		return ucm;
 	}
 
 	public void connect(String connectionAlias) throws Exception {
@@ -229,6 +237,19 @@ public class CEShell {
 						return true;
 		}
 		return false;
+	}
+	
+	public Id fetchId(String from, String where) throws Exception {
+		Id id = null;
+		
+		try {
+			id = new QueryHelper(this).fetchId("CmAcmCaseFolder", where);
+		} catch(Exception e) {
+			String msg = String.format("Case with where '%s' not found", where);
+			getResponse().printErr(msg);
+			throw e;
+		}
+		return id;
 	}
 	
 	@SuppressWarnings("deprecation")
