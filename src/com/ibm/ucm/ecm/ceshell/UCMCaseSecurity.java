@@ -10,6 +10,7 @@ import com.filenet.api.property.Property;
 import com.filenet.api.property.PropertyFilter;
 import com.filenet.api.util.Id;
 import com.ibm.bao.ceshell.ACLListCmd;
+import com.ibm.bao.ceshell.constants.FP;
 import com.ibm.bao.ceshell.util.ColDef;
 import com.ibm.bao.ceshell.util.StringUtil;
 import com.ibm.casemgmt.api.constants.CaseState;
@@ -69,19 +70,8 @@ public class UCMCaseSecurity extends ACLListCmd {
 		return ucmCaseSecurityList(pathUri);
 	}
 
-	public boolean ucmCaseSecurityList(String pathUri) {
-		Folder folder = null;
-		if (getShell().isId(pathUri)) {
-			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), new Id(pathUri), null);
-		} else if (isCaseId(pathUri)) {
-			
-		} else {
-			String decodedUri = getShell().urlDecode(pathUri);
-			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
-			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), fullPath, null);
-		}
-		
-		
+	public boolean ucmCaseSecurityList(String pathUri) throws Exception {
+		Folder folder = fetchCaseFolder(pathUri);
 		if (! isUcmCase(folder)) {
 			String msg = String.format("Folder with uri %s is not a UCM Case", pathUri);
 			getResponse().printErr(msg);
@@ -123,14 +113,29 @@ public class UCMCaseSecurity extends ACLListCmd {
 		System.out.println("");
 		
 		
-		AccessPermissionList accessPermissionList = fetchFolderPermissionList(pathUri);
+		AccessPermissionList accessPermissionList = folder.get_Permissions();
 		listPermissions(accessPermissionList, "f", pathUri);
 		return true;
 	}
-
-	private boolean isCaseId(String pathUri) {
-		// TODO Auto-generated method stub
-		return false;
+	
+	private Folder fetchCaseFolder(String pathUri) throws Exception {
+		Folder folder;
+		PropertyFilter permissionFilter = createUcmStdPermissionFilter(); 
+		
+		if (getShell().getUCM().isCaseId(pathUri)) {
+			String whereClause = String.format("UCM_REC_ID = '%S'", pathUri);
+			Id id = this.getShell().fetchId("cmAcmCaseFolder", whereClause);
+			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), id, null);
+		} else 	if (getShell().isId(pathUri)) {
+			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), 
+					new Id(pathUri), permissionFilter);
+		} else {
+			String decodedUri = getShell().urlDecode(pathUri);
+			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
+			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), 
+					fullPath, permissionFilter);
+		}
+		return folder;
 	}
 
 	private String readCaseState(Properties props) {
@@ -167,22 +172,7 @@ public class UCMCaseSecurity extends ACLListCmd {
 		return (folder.getSuperClasses()[0].equals("CmAcmCaseFolder"));
 	}
 
-	private Folder fetchCaseFolder(String pathUri) {
-		Folder folder;
-		PropertyFilter permissionFilter = createUcmStdPermissionFilter(); 
-		
-		if (getShell().isId(pathUri)) {
-			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), 
-					new Id(pathUri), permissionFilter);
-		   
-		} else {
-			String decodedUri = getShell().urlDecode(pathUri);
-			String fullPath = getShell().getCWD().relativePathToFullPath(decodedUri);
-			folder = Factory.Folder.fetchInstance(getShell().getObjectStore(), 
-					fullPath, permissionFilter);
-		}
-		return folder;
-	}
+
 	
 	
 	private PropertyFilter createUcmStdPermissionFilter() {
